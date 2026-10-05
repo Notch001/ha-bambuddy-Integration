@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.8.0";
 
 const TEXT = {
   de: {
@@ -40,6 +40,7 @@ const TEXT = {
     show_printer_queue: "Warteschlange je Drucker",
     queue_limit: "Max. Aufträge je Liste",
     up_next: "Als Nächstes",
+    collapse_queue: "Listen anfangs eingeklappt",
     other_jobs: "Weitere Aufträge",
   },
   en: {
@@ -73,6 +74,7 @@ const TEXT = {
     show_printer_queue: "Queue per printer",
     queue_limit: "Max. jobs per list",
     up_next: "Up next",
+    collapse_queue: "Lists collapsed by default",
     other_jobs: "Other jobs",
   },
 };
@@ -98,8 +100,27 @@ const DEFAULTS = {
   show_camera: false,
   show_queue: true,
   show_printer_queue: true,
+  collapse_queue: false,
   queue_limit: 5,
 };
+
+const COLLAPSE_STORE = "bambuddy-card:collapsed";
+
+function loadCollapsed() {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAPSE_STORE) || "{}");
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveCollapsed(state) {
+  try {
+    localStorage.setItem(COLLAPSE_STORE, JSON.stringify(state));
+  } catch (err) {
+    // Private mode or storage disabled: the toggle still works until reload.
+  }
+}
 
 function lang() {
   const l = (document.documentElement.lang || navigator.language || "en").slice(0, 2);
@@ -141,7 +162,7 @@ class BambuddyCard extends HTMLElement {
         {
           type: "grid",
           name: "",
-          schema: ["show_temperatures", "show_ams", "show_controls", "show_camera", "show_printer_queue", "show_queue"].map((name) => ({
+          schema: ["show_temperatures", "show_ams", "show_controls", "show_camera", "show_printer_queue", "show_queue", "collapse_queue"].map((name) => ({
             name,
             default: DEFAULTS[name],
             selector: { boolean: {} },
@@ -155,6 +176,7 @@ class BambuddyCard extends HTMLElement {
 
   setConfig(config) {
     this._config = { ...DEFAULTS, ...(config || {}) };
+    this._collapsed = loadCollapsed();
     this._signature = null;
     if (this._hass) this._update();
   }
@@ -235,8 +257,8 @@ class BambuddyCard extends HTMLElement {
   _render() {
     const t = TEXT[lang()];
     const body = this._printers.length
-      ? this._printers.map((p) => this._renderPrinter(p, t)).join("")
-      : `<div class="empty">${esc(t.no_printers)}</div>`;
+      ? `<div class="printers${this._printers.length === 1 ? " single" : ""}">${this._printers.map((p) => this._renderPrinter(p, t)).join("")}</div>`
+      : `<div class="empty pad">${esc(t.no_printers)}</div>`;
     const queue = this._config.show_queue && this._hub ? this._renderQueue(t) : "";
     const title = this._config.title ? `<h1 class="card-title">${esc(this._config.title)}</h1>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>${title}${body}${queue}</ha-card>`;
@@ -248,7 +270,7 @@ class BambuddyCard extends HTMLElement {
     const printing = PRINTING_STATES.has(state);
     const color = STATE_COLORS[state] || "var(--secondary-text-color)";
 
-    let html = `<section class="printer">
+    let html = `<section class="printer" style="--accent:${color}">
       <div class="head">
         <ha-icon icon="mdi:printer-3d"></ha-icon>
         <span class="name" data-more="${esc(p.one["sensor.printer_state"])}">${esc(p.name)}</span>
@@ -430,6 +452,20 @@ class BambuddyCard extends HTMLElement {
     </li>`;
   }
 
+  _isCollapsed(key) {
+    return this._collapsed?.[key] ?? Boolean(this._config.collapse_queue);
+  }
+
+  _toggleCollapsed(key) {
+    this._collapsed = { ...loadCollapsed(), [key]: !this._isCollapsed(key) };
+    saveCollapsed(this._collapsed);
+    this._render();
+  }
+
+  _chevron(key) {
+    return `<ha-icon class="chevron" icon="${this._isCollapsed(key) ? "mdi:chevron-down" : "mdi:chevron-up"}"></ha-icon>`;
+  }
+
   _limit() {
     return Number(this._config.queue_limit ?? DEFAULTS.queue_limit);
   }
@@ -439,15 +475,19 @@ class BambuddyCard extends HTMLElement {
     const queueState = this._state(p, "sensor.printer_queue");
     const jobs = queueState?.attributes?.jobs || [];
     if (!jobs.length) return "";
+    const key = `printer:${p.id}`;
+    const collapsed = this._isCollapsed(key);
     const limit = this._limit();
     const hidden = Math.max(0, jobs.length - limit);
     const rows = jobs.slice(0, limit).map((j, i) => this._jobRow(j, `${i + 1}.`, "", t, false)).join("");
-    return `<div class="pqueue">
-      <div class="subhead" data-more="${esc(p.one["sensor.printer_queue"])}">
-        <ha-icon icon="mdi:tray-full"></ha-icon><span>${esc(t.up_next)}</span><span class="count">${jobs.length}</span>
+    const peek = collapsed ? `<span class="peek">${esc(jobs[0].name || "")}</span>` : "";
+    return `<div class="pqueue${collapsed ? " collapsed" : ""}">
+      <div class="subhead" data-collapse="${esc(key)}" role="button" aria-expanded="${!collapsed}">
+        <ha-icon icon="mdi:tray-full"></ha-icon><span class="label">${esc(t.up_next)}</span>${peek}
+        <span class="count">${jobs.length}</span>${this._chevron(key)}
       </div>
-      <ol>${rows}</ol>
-      ${hidden ? `<div class="more" data-more="${esc(p.one["sensor.printer_queue"])}">+ ${hidden} ${esc(t.more)}</div>` : ""}
+      ${collapsed ? "" : `<ol>${rows}</ol>
+      ${hidden ? `<div class="more" data-more="${esc(p.one["sensor.printer_queue"])}">+ ${hidden} ${esc(t.more)}</div>` : ""}`}
     </div>`;
   }
 
@@ -479,23 +519,28 @@ class BambuddyCard extends HTMLElement {
         ? `<ol>${rows}</ol>${hidden ? `<div class="more" data-more="${esc(this._hub.one["todo.queue"] || this._hub.one["sensor.queue_pending"])}">+ ${hidden} ${esc(t.more)}</div>` : ""}`
         : `<div class="empty">${esc(t.queue_empty)}</div>`;
 
-    return `<section class="queue">
-      <div class="head" data-more="${esc(this._hub.one["todo.queue"] || this._hub.one["sensor.queue_pending"])}">
+    const collapsed = this._isCollapsed("queue");
+    return `<section class="queue${collapsed ? " collapsed" : ""}">
+      <div class="head" data-collapse="queue" role="button" aria-expanded="${!collapsed}">
         <ha-icon icon="mdi:format-list-numbered"></ha-icon>
         <span class="name">${esc(perPrinter ? t.other_jobs : t.queue)}</span>
-        <span class="count">${pending.length}</span>
+        <span class="count">${pending.length + printing.length}</span>${this._chevron("queue")}
       </div>
-      ${list}
+      ${collapsed ? "" : list}
     </section>`;
   }
 
   // ---- interaction ------------------------------------------------------
 
   _onClick(ev) {
-    const el = ev.composedPath().find((n) => n.dataset && (n.dataset.press || n.dataset.toggle || n.dataset.more));
+    const el = ev
+      .composedPath()
+      .find((n) => n.dataset && (n.dataset.collapse || n.dataset.press || n.dataset.toggle || n.dataset.more));
     if (!el) return;
     const t = TEXT[lang()];
-    if (el.dataset.press) {
+    if (el.dataset.collapse) {
+      this._toggleCollapsed(el.dataset.collapse);
+    } else if (el.dataset.press) {
       if (el.dataset.confirm && !window.confirm(t.confirm_stop)) return;
       this._call("button", "press", el.dataset.press);
     } else if (el.dataset.toggle) {
@@ -523,10 +568,20 @@ class BambuddyCard extends HTMLElement {
 }
 
 const STYLE = `
-  ha-card { padding: 4px 0 8px; overflow: hidden; }
+  ha-card { padding: 0 0 4px; overflow: hidden; }
+  .printers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; padding: 12px; }
+  .printers.single { padding: 0; }
+  .printers:not(.single) section.printer { border: 1px solid var(--divider-color); border-radius: 12px;
+    border-top: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--card-background-color, transparent)); }
+  .printers.single section.printer { border-top: 4px solid var(--accent); }
+  .pad { padding: 12px 16px; }
   .card-title { margin: 0; padding: 12px 16px 0; font-size: 1.25em; font-weight: 500; color: var(--ha-card-header-color, var(--primary-text-color)); }
   section { padding: 12px 16px; }
-  section + section { border-top: 1px solid var(--divider-color); }
+  .printers + section, .card-title + section { border-top: 1px solid var(--divider-color); }
+  [data-collapse] { cursor: pointer; user-select: none; }
+  .chevron { --mdc-icon-size: 20px; color: var(--secondary-text-color); }
+  .peek { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: var(--primary-text-color); }
+  .pqueue.collapsed { padding-bottom: 4px; }
   [data-more], [data-press], [data-toggle] { cursor: pointer; }
   .head { display: flex; align-items: center; gap: 8px; }
   .head ha-icon { color: var(--state-icon-color, var(--secondary-text-color)); --mdc-icon-size: 22px; }
@@ -585,7 +640,8 @@ const STYLE = `
   .pqueue ol { margin-top: 2px; }
   .pqueue li { padding: 4px 0; }
   .subhead { display: flex; align-items: center; gap: 6px; font-size: 0.85em; font-weight: 500; color: var(--secondary-text-color); padding-top: 4px; }
-  .subhead span:first-of-type { flex: 1; }
+  .subhead .label { flex: none; }
+  .pqueue:not(.collapsed) .subhead .label { flex: 1; }
   .subhead ha-icon { --mdc-icon-size: 16px; }
   .pqueue .count { background: var(--card-background-color); }
   .more { margin-top: 6px; font-size: 0.85em; color: var(--primary-color); }

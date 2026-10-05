@@ -17,7 +17,7 @@ Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/
 - **Controls:** pause, resume, stop, confirm a cleared build plate, chamber light, print speed.
 - **Dashboard card:** one card for all printers and the queue, included and loaded automatically.
 
-<img src="docs/card.png" alt="Bambuddy card (sample data)" width="420">
+<img src="docs/card.png" alt="Bambuddy card (sample data)" width="640">
 
 ## Requirements
 
@@ -72,10 +72,15 @@ show_controls: true          # needs the "Control Printer" permission
 show_camera: false
 show_printer_queue: true     # jobs waiting for a printer, shown right under it
 show_queue: true             # all other jobs (any printer / printers not on this card)
+collapse_queue: false        # start with the job lists collapsed
 queue_limit: 5               # max. jobs per list
 ```
 
-Tapping a value opens its details. "Stop" asks for confirmation.
+Each printer gets its own tile with a coloured top edge showing its state. On wide screens the tiles sit side by side, on phones below each other. Tapping a value opens its details; "Stop" asks for confirmation.
+
+The job lists can be collapsed by tapping their header; a collapsed printer list still shows the next job. The browser remembers what you collapsed.
+
+**One card per printer:** if you prefer separate cards (e.g. one per column in a sections dashboard), add the card several times, pick one printer in each (`printers: [<device id>]`) and switch off `show_queue` in all but one.
 
 ## Entities
 

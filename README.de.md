@@ -13,7 +13,7 @@ Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/mazig
 - **Steuerung:** Pausieren, Fortsetzen, Abbrechen, Druckplatte als geräumt bestätigen, Bauraumbeleuchtung, Druckgeschwindigkeit.
 - **Dashboard-Karte:** eine Karte für alle Drucker und die Warteschlange, wird mitgeliefert und automatisch geladen.
 
-<img src="docs/card.png" alt="Bambuddy-Karte (Beispieldaten)" width="420">
+<img src="docs/card.png" alt="Bambuddy-Karte (Beispieldaten)" width="640">
 
 ## Voraussetzungen
 
@@ -68,10 +68,15 @@ show_controls: true          # braucht das Recht „Drucker steuern“
 show_camera: false
 show_printer_queue: true     # Aufträge für einen Drucker direkt unter dem Drucker
 show_queue: true             # alle übrigen Aufträge (beliebiger Drucker / Drucker nicht auf der Karte)
+collapse_queue: false        # Auftragslisten anfangs eingeklappt
 queue_limit: 5               # max. Aufträge je Liste
 ```
 
-Ein Tipp auf einen Wert öffnet die Details. „Abbrechen“ fragt vorher nach.
+Jeder Drucker bekommt eine eigene Kachel, deren farbiger oberer Rand den Status zeigt. Auf breiten Bildschirmen stehen die Kacheln nebeneinander, am Handy untereinander. Ein Tipp auf einen Wert öffnet die Details; „Abbrechen“ fragt vorher nach.
+
+Die Auftragslisten lassen sich mit einem Tipp auf ihre Überschrift ein- und ausklappen; eingeklappt zeigt die Druckerliste weiterhin den nächsten Auftrag. Der Browser merkt sich, was eingeklappt ist.
+
+**Eine Karte pro Drucker:** Wer lieber getrennte Karten möchte (z. B. eine pro Spalte im Abschnitte-Dashboard), fügt die Karte mehrmals hinzu, wählt in jeder einen Drucker aus (`printers: [<Geräte-ID>]`) und schaltet `show_queue` bei allen außer einer aus.
 
 ## Entitäten
 
