@@ -121,6 +121,7 @@ def _nozzle_attrs(entity: BambuddyPrinterEntity) -> dict[str, Any]:
 def _next_job_attrs(entity: BambuddyPrinterEntity) -> dict[str, Any]:
     pending = [i for i in entity.printer_queue if i.get("status") == "pending"]
     return {
+        "printer_id": entity.printer_id,
         "next_job": job_name(pending[0]) if pending else None,
         "jobs": jobs_attribute(pending),
     }

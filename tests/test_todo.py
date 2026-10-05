@@ -38,3 +38,25 @@ async def test_card_is_served(hass: HomeAssistant, aioclient_mock, hass_client) 
     resp = await client.get("/bambuddy/bambuddy-card.js")
     assert resp.status == 200
     assert "customElements.define(\"bambuddy-card\"" in await resp.text()
+
+
+async def test_card_registered_as_dashboard_resource(hass: HomeAssistant, aioclient_mock) -> None:
+    """Dashboards (also in the companion apps) load the card as a resource."""
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "http", {})
+    assert await async_setup_component(hass, "lovelace", {})
+    mock_bambuddy(aioclient_mock)
+    await _setup(hass)
+    await hass.async_block_till_done()
+
+    resources = hass.data["lovelace"].resources
+    urls = [item["url"] for item in resources.async_items()]
+    assert len([u for u in urls if u.startswith("/bambuddy/bambuddy-card.js?v=")]) == 1
+
+    # An entry from an older version is updated, not duplicated.
+    from custom_components.bambuddy import _async_register_card_resource
+
+    await _async_register_card_resource(hass, "/bambuddy/bambuddy-card.js?v=9.9.9")
+    urls = [item["url"] for item in resources.async_items()]
+    assert [u for u in urls if u.startswith("/bambuddy/")] == ["/bambuddy/bambuddy-card.js?v=9.9.9"]

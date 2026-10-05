@@ -3,7 +3,8 @@
   "name": "Bambuddy",
   "after_dependencies": [
     "frontend",
-    "http"
+    "http",
+    "lovelace"
   ],
   "codeowners": [
     "@Notch001"
@@ -14,5 +15,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Notch001/ha-bambuddy-integration/issues",
   "requirements": [],
-  "version": "0.6.0"
+  "version": "0.7.0"
 }

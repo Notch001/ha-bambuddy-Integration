@@ -1,187 +1,154 @@
-# Bambuddy für Home Assistant
+# Bambuddy for Home Assistant
 
-Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/maziggy/bambuddy), die selbst gehostete Verwaltung für Bambu-Lab-Drucker.
+<img src="custom_components/bambuddy/brand/icon.png" alt="" width="72" align="right">
 
-Sie zeigt dir in Home Assistant:
+[![Validate](https://github.com/Notch001/ha-bambuddy-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Notch001/ha-bambuddy-integration/actions/workflows/validate.yml)
+[![Release](https://img.shields.io/github/v/release/Notch001/ha-bambuddy-integration)](https://github.com/Notch001/ha-bambuddy-integration/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
 
-- **Den Zustand jedes Druckers:** Status, aktueller Druck, Fortschritt, Restzeit, voraussichtliches Ende, Schicht, Temperaturen, Online/Offline, Fehler, „Druckplatte räumen“.
-- **Die Warteschlange:** wartende und laufende Druckaufträge, insgesamt und pro Drucker, mit der Liste der Aufträge als Attribut.
-- **AMS und Filament:** pro Slot Filament, Farbe und Restmenge, dazu Luftfeuchtigkeit und Temperatur jedes AMS.
-- **Bilder:** Vorschau des aktuellen Drucks und das Kamerabild des Druckers.
-- **Steuerung:** Pausieren, Fortsetzen, Abbrechen, Druckplatte als geräumt bestätigen, Bauraumbeleuchtung und Druckgeschwindigkeit.
+🇩🇪 [Deutsche Anleitung](README.de.md)
 
-## Symbol
+Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/bambuddy), the self-hosted manager for Bambu Lab printers.
 
-<img src="custom_components/bambuddy/brand/icon.png" alt="Icon" width="64">
+- **Printer status:** state, current print with preview, progress, remaining time, estimated end, layer, temperatures, online/offline, errors, "clear the build plate".
+- **Print queue:** waiting and running jobs, overall and per printer, as a to-do list and as sensors.
+- **AMS and filament:** per slot the filament and its colour (e.g. "PLA Basic · Jade White") and remaining amount, plus humidity and temperature of every AMS.
+- **Camera:** snapshot and live stream, relayed through Bambuddy.
+- **Controls:** pause, resume, stop, confirm a cleared build plate, chamber light, print speed.
+- **Dashboard card:** one card for all printers and the queue, included and loaded automatically.
 
-Ab Home Assistant 2026.3 zeigt die Integration ihr eigenes Symbol in der Integrationsliste. In älteren Versionen erscheint stattdessen ein Platzhalter. Die Vorlage liegt als SVG in `docs/icon.svg`.
+<img src="docs/card.png" alt="Bambuddy card (sample data)" width="420">
 
-## Voraussetzungen
+## Requirements
 
-- Home Assistant 2025.3 oder neuer
-- Ein laufender Bambuddy-Server, den Home Assistant im Netzwerk erreicht
-- [HACS](https://hacs.xyz/) (empfohlen)
+- Home Assistant 2025.3 or newer (2026.3+ shows the integration icon)
+- A running Bambuddy server that Home Assistant can reach
+- [HACS](https://hacs.xyz/) (recommended)
 
 ## Installation
 
-### 1. API-Schlüssel in Bambuddy anlegen
+### 1. Create an API key in Bambuddy
 
-Nur nötig, wenn in Bambuddy die Anmeldung eingeschaltet ist.
+Only needed if authentication is enabled in Bambuddy.
 
-1. Bambuddy im Browser öffnen → **Einstellungen** → **API-Schlüssel**.
-2. **Schlüssel erstellen**, Name z. B. `Home Assistant`.
-3. **Status lesen** anhaken. Wenn du den Drucker aus Home Assistant steuern willst (Pause, Abbrechen, Licht, Geschwindigkeit), zusätzlich **Drucker steuern**. Alle anderen Rechte können aus bleiben.
-4. Den angezeigten Schlüssel (beginnt mit `bb_`) **sofort kopieren**. Er wird nur einmal angezeigt.
+1. Open Bambuddy → **Settings** → **API Keys** → **Create Key**, name it e.g. `Home Assistant`.
+2. Tick **Read Status**. To control printers from Home Assistant (pause, stop, light, speed) also tick **Control Printer**. Everything else can stay off.
+3. **Copy the key right away** (it starts with `bb_`). It is only shown once.
 
-### 2. Integration über HACS installieren
+### 2. Install via HACS
 
-1. In Home Assistant **HACS** öffnen.
-2. Oben rechts auf die drei Punkte **⋮** → **Benutzerdefinierte Repositories**.
-3. Als Repository `https://github.com/Notch001/ha-bambuddy-integration` eintragen, als Typ **Integration** wählen → **Hinzufügen**.
-4. In HACS nach **Bambuddy** suchen, öffnen und **Herunterladen** klicken.
-5. Home Assistant neu starten (**Einstellungen** → **System** → oben rechts Ein/Aus-Symbol → **Home Assistant neu starten**).
+1. Open **HACS** → **⋮** (top right) → **Custom repositories**.
+2. Repository `https://github.com/Notch001/ha-bambuddy-integration`, type **Integration** → **Add**.
+3. Search for **Bambuddy** in HACS, open it and click **Download**.
+4. Restart Home Assistant.
 
 <details>
-<summary>Ohne HACS (manuell)</summary>
+<summary>Without HACS</summary>
 
-Den Ordner `custom_components/bambuddy` aus diesem Repository nach `/config/custom_components/bambuddy` in deine Home-Assistant-Installation kopieren (z. B. mit dem Add-on „File editor“ oder „Samba share“), dann Home Assistant neu starten.
+Copy `custom_components/bambuddy` from this repository to `/config/custom_components/bambuddy` and restart Home Assistant.
 </details>
 
-### 3. Integration einrichten
+### 3. Set up the integration
 
-1. **Einstellungen** → **Geräte & Dienste** → unten rechts **Integration hinzufügen** → **Bambuddy** suchen.
-2. **Bambuddy-Adresse** eintragen, also dieselbe Adresse, mit der du Bambuddy im Browser öffnest, z. B. `http://192.168.1.50:8000`.
-3. Den **API-Schlüssel** aus Schritt 1 einfügen, oder das Feld leer lassen, wenn Bambuddy keine Anmeldung nutzt.
-4. **Absenden**. Danach erscheinen ein Gerät „Bambuddy“ für die Warteschlange und ein Gerät pro Drucker.
+1. **Settings** → **Devices & services** → **Add integration** → **Bambuddy**.
+2. Enter the **Bambuddy URL**, the same address you open Bambuddy with in the browser, e.g. `http://192.168.1.50:8000`.
+3. Paste the **API key**, or leave it empty if Bambuddy has authentication disabled.
 
-Neu in Bambuddy angelegte Drucker tauchen automatisch auf. Das Abfrageintervall (Standard: 30 Sekunden) lässt sich unter **Konfigurieren** bei der Integration ändern.
+You get one device "Bambuddy" for the queue and one device per printer. Printers, AMS units and spools added later appear automatically. The polling interval (default 30 s) can be changed under **Configure**.
 
-## Entitäten
+## Dashboard card
 
-### Pro Drucker
+The integration ships its own card and registers it as a dashboard resource automatically. Nothing else to install.
 
-| Entität | Beschreibung |
-|---|---|
-| Status | Bereit, Vorbereitung, Druckt, Pausiert, Fertig, Fehlgeschlagen, Offline |
-| Aktueller Druck | Name des laufenden Drucks |
-| Fortschritt | in % |
-| Restzeit | in Minuten |
-| Voraussichtliches Ende | Uhrzeit |
-| Aktuelle Schicht / Schichten gesamt | |
-| Düsen-, Bett-, Bauraumtemperatur | Ist- und Zielwerte (Bauraum und zweite Düse nur, wenn der Drucker sie meldet) |
-| Warteschlange | Anzahl der Aufträge, die fest diesem Drucker zugewiesen sind; Attribute `next_job` und `jobs` |
-| Fehlermeldungen | Anzahl der HMS-Meldungen; Details im Attribut `errors` |
-| Druckphase | z. B. „Heatbed preheating“, „Auto bed leveling“ |
-| Online, Druckt, Fehler, Druckplatte räumen | An/Aus-Sensoren |
-| Düse | Durchmesser; Typ im Attribut `nozzles` |
-| Tür, WLAN-Signal, Lüfter, SD-Karte, Zeitraffer | standardmäßig deaktiviert, bei Bedarf einschalten |
-
-### AMS und Filament (pro Drucker)
-
-| Entität | Beschreibung |
-|---|---|
-| AMS 1 Slot 1 … | Filament und Farbe, z. B. „PLA Basic · Jade White“, sonst „Leer“ oder „Unbekannt“. Die Farbnamen kommen aus dem Farbkatalog von Bambuddy; fehlt dort ein Eintrag, steht ein Grundfarbname da (z. B. „Rot“). Das Symbol ist eine Spule in der Filamentfarbe. Attribute: `type`, `color`, `color_name`, `remaining` (in %, nur bei Bambu-Spulen mit RFID), `nozzle_temp_min`, `nozzle_temp_max`, `active` (wird gerade gedruckt) |
-| Externe Spule | dasselbe für die Spule am Halter außen |
-| AMS 1 Luftfeuchtigkeit / Temperatur | |
-| AMS 1 Trocknung Restzeit | nur bei Druckern, deren AMS trocknen kann |
-
-### Bilder (pro Drucker)
-
-| Entität | Beschreibung |
-|---|---|
-| Druckvorschau | Vorschaubild des laufenden Drucks aus der 3MF-Datei |
-| Kamera | Kamerabild und Livestream, über Bambuddy weitergeleitet |
-
-### Steuerung (pro Drucker)
-
-Braucht beim API-Schlüssel das Recht **Drucker steuern**. Ohne dieses Recht zeigt Home Assistant beim Drücken eine Fehlermeldung, sonst passiert nichts.
-
-| Entität | Beschreibung |
-|---|---|
-| Pausieren / Fortsetzen / Druck abbrechen | Knöpfe, nur aktiv, wenn es gerade passt (z. B. „Fortsetzen“ nur bei pausiertem Druck) |
-| Druckplatte geräumt | bestätigt nach einem fertigen Druck, dass die Platte frei ist, damit Bambuddy den nächsten Auftrag starten kann |
-| Bauraumbeleuchtung | Licht an/aus |
-| Druckgeschwindigkeit | Leise, Standard, Sport, Turbo (nur während eines Drucks) |
-
-### Bambuddy (Warteschlange)
-
-| Entität | Beschreibung |
-|---|---|
-| Wartende Druckaufträge | Anzahl; Attribute `next_job` und `jobs` (max. 50 Einträge) |
-| Laufende Druckaufträge | Anzahl; Attribut `jobs` |
-| Druck-Warteschlange | Die Warteschlange als **Liste** (To-do-Liste, nur lesen), siehe unten |
-
-Jeder Eintrag in `jobs` enthält: `id`, `name`, `status`, `printer` (bei nicht zugewiesenen Aufträgen z. B. „Any A1 Mini“), `position`, `scheduled_time`, `started_at`, `print_time_minutes`, `filament_type`, `filament_grams`, `manual_start`, `waiting_reason`.
-
-## Update
-
-Jede neue Version erscheint als Release auf GitHub. HACS prüft regelmäßig darauf und meldet sie unter **Einstellungen** → **Updates**. Sofort prüfen: HACS → **Bambuddy** → oben rechts **⋮** → **Informationen aktualisieren**. Nach dem Update Home Assistant neu starten.
-
-## Dashboard-Karte
-
-Die Integration bringt eine eigene Karte mit. Sie wird automatisch geladen, du musst nichts extra installieren.
-
-<img src="docs/card.png" alt="Bambuddy-Karte (Beispieldaten)" width="420">
-
-**Hinzufügen:** Dashboard bearbeiten → **Karte hinzufügen** → nach **Bambuddy** suchen. Die Karte findet alle Drucker selbst. Im Karteneditor kannst du Drucker auswählen und Bereiche (Temperaturen, AMS, Steuerung, Kamera, Warteschlange) ein- und ausblenden.
-
-Oder per YAML:
+**Add it:** edit a dashboard → **Add card** → search for **Bambuddy**. The card finds all printers by itself. In the card editor you can pick printers and switch sections on or off.
 
 ```yaml
 type: custom:bambuddy-card
-title: 3D-Drucker            # optional
-printers: []                 # optional: Geräte-IDs, leer = alle Drucker
+title: 3D printers           # optional
+printers: []                 # optional: device IDs, empty = all printers
 show_temperatures: true
 show_ams: true
-show_controls: true          # braucht das Recht „Drucker steuern“
+show_controls: true          # needs the "Control Printer" permission
 show_camera: false
-show_queue: true
-queue_limit: 5               # so viele wartende Aufträge werden gezeigt
+show_printer_queue: true     # jobs waiting for a printer, shown right under it
+show_queue: true             # all other jobs (any printer / printers not on this card)
+queue_limit: 5               # max. jobs per list
 ```
 
-Ein Klick auf einen Wert öffnet die Details der jeweiligen Entität. „Abbrechen“ fragt vorher nach.
+Tapping a value opens its details. "Stop" asks for confirmation.
 
-Falls die Karte nach einem Update nicht erscheint: Browser-Seite einmal neu laden (am Handy die Companion-App: **Einstellungen** → **Companion App** → **Debugging** → **Frontend-Cache zurücksetzen**).
+## Entities
 
-## Warteschlange als Liste anzeigen
+### Per printer
 
-Die Entität **Druck-Warteschlange** ist eine To-do-Liste. Laufende Drucke stehen oben mit ▶, darunter die wartenden Aufträge in der Reihenfolge, in der Bambuddy sie startet. Unter jedem Auftrag stehen Drucker, Druckdauer, Filament und, falls vorhanden, warum er noch wartet. Bearbeitet wird die Warteschlange weiterhin in Bambuddy; in Home Assistant ist die Liste nur zum Anschauen.
+| Entity | Description |
+|---|---|
+| Status | Idle, Preparing, Printing, Paused, Finished, Failed, Offline |
+| Current print, Print stage | file name; e.g. "Heatbed preheating" |
+| Progress, Remaining time, Estimated end | %, minutes, timestamp |
+| Current layer, Total layers | |
+| Nozzle / bed / chamber temperature | current and target (chamber and second nozzle only if the printer reports them) |
+| Queue | jobs pinned to this printer; attributes `next_job`, `jobs` |
+| Errors | number of HMS messages; details in `errors` |
+| Online, Printing, Error, Clear build plate | binary sensors |
+| Nozzle | diameter; type in `nozzles` |
+| Print preview | image of the current print |
+| Camera | snapshot and live stream |
+| Door, Wi-Fi signal, fans, SD card, timelapse | disabled by default |
 
-- **Seitenleiste:** Unter **To-do-Listen** taucht „Bambuddy Druck-Warteschlange“ automatisch auf.
-- **Dashboard:** Dashboard bearbeiten → **Karte hinzufügen** → **To-do-Liste** → als Entität „Bambuddy Druck-Warteschlange“ wählen. Oder per YAML:
+### AMS and filament
 
-```yaml
-type: todo-list
-entity: todo.bambuddy_druck_warteschlange
-title: Druck-Warteschlange
-```
+| Entity | Description |
+|---|---|
+| AMS 1 slot 1 … | filament and colour, e.g. "PLA Basic · Jade White", otherwise "Empty"/"Unknown". Colour names come from Bambuddy's colour catalogue, with a basic colour name as fallback. The entity picture is a spool in the filament colour. Attributes: `type`, `color`, `color_name`, `remaining` (%, RFID spools only), `nozzle_temp_min`, `nozzle_temp_max`, `active`, `ams`, `slot` |
+| External spool | same for the external spool holder |
+| AMS 1 humidity / temperature | |
+| AMS 1 drying remaining | only for printers whose AMS can dry |
 
-Die Entitäts-ID kann bei dir anders heißen; du findest sie unter **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy**.
+### Controls (need the "Control Printer" permission)
 
-## Beispiel: eigene Markdown-Karte
+| Entity | Description |
+|---|---|
+| Pause / Resume / Stop print | buttons, only available when they make sense |
+| Build plate cleared | tells Bambuddy the plate is free so it can start the next job |
+| Chamber light | on/off |
+| Print speed | Silent, Standard, Sport, Ludicrous (during a print) |
 
-Wer die Liste anders gestalten will, kann die Attribute des Sensors „Wartende Druckaufträge“ in einer Markdown-Karte verwenden. Ersetze `sensor.bambuddy_wartende_druckauftrage` durch die Entitäts-ID deines Sensors „Wartende Druckaufträge“. Du findest sie unter **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy**.
+Without the permission, Home Assistant shows an error message when pressed; nothing else happens.
 
-```yaml
-type: markdown
-title: Druck-Warteschlange
-content: >
-  {% set jobs = state_attr('sensor.bambuddy_wartende_druckauftrage', 'jobs') or [] %}
-  {% for job in jobs %}
-  {{ loop.index }}. **{{ job.name }}** – {{ job.printer or 'beliebiger Drucker' }}
-  {%- if job.print_time_minutes %} ({{ job.print_time_minutes }} min){% endif %}
-  {% else %}
-  Keine Aufträge in der Warteschlange.
-  {% endfor %}
-```
+### Bambuddy (queue)
 
-## Entwicklung
+| Entity | Description |
+|---|---|
+| Queued print jobs | count; attributes `next_job`, `jobs` (max. 50) |
+| Running print jobs | count; attribute `jobs` |
+| Print queue | the queue as a read-only **to-do list**: running jobs (▶) first, then waiting jobs in the order Bambuddy starts them |
+
+Each `jobs` entry has `id`, `name`, `status`, `printer`, `printer_id`, `position`, `scheduled_time`, `started_at`, `print_time_minutes`, `filament_type`, `filament_grams`, `manual_start`, `waiting_reason`.
+
+The to-do list appears in the sidebar under **To-do lists** and can be added to a dashboard with the built-in **To-do list** card.
+
+## Updates
+
+Every new version is published as a GitHub release. HACS checks for releases regularly and shows them under **Settings** → **Updates**. To check right away: HACS → **Bambuddy** → **⋮** → **Update information**. Restart Home Assistant after updating.
+
+## Troubleshooting
+
+**The card shows "Configuration error" / "Custom element doesn't exist" (often only on the phone).** The browser or app has not loaded the card script yet. Reload the page. In the companion app: **Settings** → **Companion app** → **Debugging** → **Reset frontend cache**, then reopen the app. Since 0.7.0 the card is also registered under **Settings** → **Dashboards** → **⋮** → **Resources**, which the apps load reliably.
+
+**Control buttons show an error.** The API key lacks the **Control Printer** permission. Edit the key in Bambuddy or create a new one.
+
+**Debug logs:** **Settings** → **Devices & services** → **Bambuddy** → **Enable debug logging**.
+
+## Development
 
 ```bash
 pip install -r requirements_test.txt
 python -m pytest
 ```
 
-## Lizenz
+A release is created automatically when the version in `custom_components/bambuddy/manifest.json` changes on `main`.
 
-MIT, siehe [LICENSE](LICENSE). Diese Integration ist ein Community-Projekt und gehört nicht zum Bambuddy-Projekt oder zu Bambu Lab.
+## License
+
+MIT, see [LICENSE](LICENSE). This is a community project, not affiliated with the Bambuddy project or Bambu Lab.

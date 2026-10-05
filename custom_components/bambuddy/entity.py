@@ -64,6 +64,7 @@ def job_summary(item: dict[str, Any]) -> dict[str, Any]:
         "name": job_name(item),
         "status": item.get("status"),
         "printer": printer,
+        "printer_id": item.get("printer_id"),
         "position": item.get("position"),
         "scheduled_time": item.get("scheduled_time"),
         "started_at": item.get("started_at"),

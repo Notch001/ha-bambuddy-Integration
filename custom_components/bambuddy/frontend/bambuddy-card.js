@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.7.0";
 
 const TEXT = {
   de: {
@@ -36,8 +36,11 @@ const TEXT = {
     show_ams: "AMS / Filament",
     show_controls: "Steuerung",
     show_camera: "Kamera",
-    show_queue: "Warteschlange",
-    queue_limit: "Max. Aufträge in der Liste",
+    show_queue: "Warteschlange (übrige Aufträge)",
+    show_printer_queue: "Warteschlange je Drucker",
+    queue_limit: "Max. Aufträge je Liste",
+    up_next: "Als Nächstes",
+    other_jobs: "Weitere Aufträge",
   },
   en: {
     queue: "Queue",
@@ -66,8 +69,11 @@ const TEXT = {
     show_ams: "AMS / filament",
     show_controls: "Controls",
     show_camera: "Camera",
-    show_queue: "Queue",
-    queue_limit: "Max. jobs in the list",
+    show_queue: "Queue (remaining jobs)",
+    show_printer_queue: "Queue per printer",
+    queue_limit: "Max. jobs per list",
+    up_next: "Up next",
+    other_jobs: "Other jobs",
   },
 };
 
@@ -91,6 +97,7 @@ const DEFAULTS = {
   show_controls: true,
   show_camera: false,
   show_queue: true,
+  show_printer_queue: true,
   queue_limit: 5,
 };
 
@@ -134,7 +141,7 @@ class BambuddyCard extends HTMLElement {
         {
           type: "grid",
           name: "",
-          schema: ["show_temperatures", "show_ams", "show_controls", "show_camera", "show_queue"].map((name) => ({
+          schema: ["show_temperatures", "show_ams", "show_controls", "show_camera", "show_printer_queue", "show_queue"].map((name) => ({
             name,
             default: DEFAULTS[name],
             selector: { boolean: {} },
@@ -266,6 +273,7 @@ class BambuddyCard extends HTMLElement {
     if (this._config.show_temperatures) html += this._renderTemps(p, t);
     if (this._config.show_ams) html += this._renderAms(p, t);
     if (this._config.show_controls) html += this._renderControls(p, t);
+    if (this._config.show_printer_queue) html += this._renderPrinterQueue(p, t);
     if (this._config.show_camera) html += this._renderCamera(p);
 
     return html + "</section>";
@@ -408,40 +416,73 @@ class BambuddyCard extends HTMLElement {
     return `<img class="camera" src="${esc(url)}" alt="" data-more="${esc(p.one["camera.camera"])}">`;
   }
 
-  _renderQueue(t) {
-    const printingState = this._state(this._hub, "sensor.queue_printing");
-    const pendingState = this._state(this._hub, "sensor.queue_pending");
-    const printing = printingState?.attributes?.jobs || [];
-    const pending = pendingState?.attributes?.jobs || [];
-    const total = pending.length + printing.length;
-    const limit = Number(this._config.queue_limit ?? DEFAULTS.queue_limit);
+  _jobRow(job, marker, cls, t, showPrinter = true) {
+    const details = [
+      showPrinter ? job.printer || t.any : null,
+      job.print_time_minutes ? formatMinutes(job.print_time_minutes) : null,
+      job.filament_type,
+    ].filter(Boolean);
+    return `<li class="${cls}">
+      <span class="marker">${marker}</span>
+      <span class="job-name">${esc(job.name || "?")}</span>
+      ${details.length ? `<span class="job-details">${esc(details.join(" · "))}</span>` : ""}
+      ${job.waiting_reason ? `<span class="job-wait">${esc(job.waiting_reason)}</span>` : ""}
+    </li>`;
+  }
 
-    const row = (job, marker, cls) => {
-      const details = [
-        job.printer || t.any,
-        job.print_time_minutes ? formatMinutes(job.print_time_minutes) : null,
-        job.filament_type,
-      ].filter(Boolean);
-      return `<li class="${cls}">
-        <span class="marker">${marker}</span>
-        <span class="job-name">${esc(job.name || "?")}</span>
-        <span class="job-details">${esc(details.join(" · "))}</span>
-        ${job.waiting_reason ? `<span class="job-wait">${esc(job.waiting_reason)}</span>` : ""}
-      </li>`;
-    };
+  _limit() {
+    return Number(this._config.queue_limit ?? DEFAULTS.queue_limit);
+  }
+
+  // Jobs pinned to this printer, right under it.
+  _renderPrinterQueue(p, t) {
+    const queueState = this._state(p, "sensor.printer_queue");
+    const jobs = queueState?.attributes?.jobs || [];
+    if (!jobs.length) return "";
+    const limit = this._limit();
+    const hidden = Math.max(0, jobs.length - limit);
+    const rows = jobs.slice(0, limit).map((j, i) => this._jobRow(j, `${i + 1}.`, "", t, false)).join("");
+    return `<div class="pqueue">
+      <div class="subhead" data-more="${esc(p.one["sensor.printer_queue"])}">
+        <ha-icon icon="mdi:tray-full"></ha-icon><span>${esc(t.up_next)}</span><span class="count">${jobs.length}</span>
+      </div>
+      <ol>${rows}</ol>
+      ${hidden ? `<div class="more" data-more="${esc(p.one["sensor.printer_queue"])}">+ ${hidden} ${esc(t.more)}</div>` : ""}
+    </div>`;
+  }
+
+  _renderQueue(t) {
+    let printing = this._state(this._hub, "sensor.queue_printing")?.attributes?.jobs || [];
+    let pending = this._state(this._hub, "sensor.queue_pending")?.attributes?.jobs || [];
+    const perPrinter = this._config.show_printer_queue;
+    if (perPrinter) {
+      // Jobs already shown under their printer (running job or "up next")
+      // are left out; what remains is unassigned or for printers not on
+      // this card.
+      const shown = new Set(
+        this._printers
+          .map((p) => this._state(p, "sensor.printer_queue")?.attributes?.printer_id)
+          .filter((id) => id != null),
+      );
+      printing = printing.filter((j) => j.printer_id == null || !shown.has(j.printer_id));
+      pending = pending.filter((j) => j.printer_id == null || !shown.has(j.printer_id));
+      if (!printing.length && !pending.length) return "";
+    }
+    const limit = this._limit();
     const rows = [
-      ...printing.map((j) => row(j, '<ha-icon icon="mdi:play"></ha-icon>', "running")),
-      ...pending.slice(0, limit).map((j, i) => row(j, `${i + 1}.`, "")),
+      ...printing.map((j) => this._jobRow(j, '<ha-icon icon="mdi:play"></ha-icon>', "running", t)),
+      ...pending.slice(0, limit).map((j, i) => this._jobRow(j, `${i + 1}.`, "", t)),
     ].join("");
     const hidden = Math.max(0, pending.length - limit);
-    const list = total
-      ? `<ol>${rows}</ol>${hidden ? `<div class="more" data-more="${esc(this._hub.one["todo.queue"] || this._hub.one["sensor.queue_pending"])}">+ ${hidden} ${esc(t.more)}</div>` : ""}`
-      : `<div class="empty">${esc(t.queue_empty)}</div>`;
+    const list =
+      printing.length || pending.length
+        ? `<ol>${rows}</ol>${hidden ? `<div class="more" data-more="${esc(this._hub.one["todo.queue"] || this._hub.one["sensor.queue_pending"])}">+ ${hidden} ${esc(t.more)}</div>` : ""}`
+        : `<div class="empty">${esc(t.queue_empty)}</div>`;
 
     return `<section class="queue">
-      <div class="head" data-more="${esc(this._hub.one["sensor.queue_pending"])}">
+      <div class="head" data-more="${esc(this._hub.one["todo.queue"] || this._hub.one["sensor.queue_pending"])}">
         <ha-icon icon="mdi:format-list-numbered"></ha-icon>
-        <span class="name">${esc(t.queue)}</span>
+        <span class="name">${esc(perPrinter ? t.other_jobs : t.queue)}</span>
         <span class="count">${pending.length}</span>
       </div>
       ${list}
@@ -540,6 +581,13 @@ const STYLE = `
   li.running .job-name { color: var(--success-color, #43a047); }
   .job-details, .job-wait { font-size: 0.82em; color: var(--secondary-text-color); }
   .job-wait { font-style: italic; }
+  .pqueue { margin-top: 12px; padding: 4px 10px 2px; border-radius: 8px; background: var(--secondary-background-color); }
+  .pqueue ol { margin-top: 2px; }
+  .pqueue li { padding: 4px 0; }
+  .subhead { display: flex; align-items: center; gap: 6px; font-size: 0.85em; font-weight: 500; color: var(--secondary-text-color); padding-top: 4px; }
+  .subhead span:first-of-type { flex: 1; }
+  .subhead ha-icon { --mdc-icon-size: 16px; }
+  .pqueue .count { background: var(--card-background-color); }
   .more { margin-top: 6px; font-size: 0.85em; color: var(--primary-color); }
   .empty { color: var(--secondary-text-color); font-size: 0.9em; padding: 8px 0 0; }
 `;
