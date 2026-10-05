@@ -7,7 +7,7 @@
  * One printer, compact (kitchen dashboards): type: custom:bambuddy-printer-card
  */
 
-const CARD_VERSION = "0.14.0";
+const CARD_VERSION = "0.14.1";
 
 const TEXT = {
   de: {
@@ -1255,7 +1255,9 @@ class BambuddyPrinterCard extends HTMLElement {
   }
 
   getGridOptions() {
-    return { columns: 6, min_columns: 3 };
+    // A third of a section: three printers side by side. Wider or narrower
+    // via the card's Layout tab; the card adapts to whatever width it gets.
+    return { columns: 4, min_columns: 3 };
   }
 
   connectedCallback() {
@@ -1345,7 +1347,10 @@ class BambuddyPrinterCard extends HTMLElement {
         ? endDate.toLocaleTimeString(this._hass.locale?.language || undefined, { hour: "2-digit", minute: "2-digit" })
         : "";
       const parts = [remaining != null ? `${t.pc_left} ${formatMinutes(remaining)}`.trim() : "", endText ? `${t.pc_until} ${endText}` : ""].filter(Boolean);
-      if (parts.length) time = `<div class="time"><ha-icon icon="mdi:timer-sand"></ha-icon><span>${esc(parts.join(" · "))}</span></div>`;
+      if (parts.length)
+        time = `<div class="time"><ha-icon icon="mdi:timer-sand"></ha-icon><span>${parts
+          .map((part) => `<span class="part">${esc(part)}</span>`)
+          .join('<span class="sep"> · </span>')}</span></div>`;
     }
 
     const dot = (col) =>
@@ -1403,7 +1408,8 @@ const PRINTER_STYLE = `
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .job.idle { color: var(--secondary-text-color); }
   .time { display: flex; align-items: center; gap: 6px; font-size: 0.9em; color: var(--secondary-text-color); }
-  .time ha-icon { --mdc-icon-size: 16px; }
+  .time ha-icon { --mdc-icon-size: 16px; flex: none; }
+  .time .part { white-space: nowrap; }
   .filament { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.95em; color: var(--primary-text-color); }
   .filament > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .filament.loaded { gap: 6px; flex-wrap: wrap; }
@@ -1420,6 +1426,27 @@ const PRINTER_STYLE = `
     .top { justify-content: center; }
     .name { flex: 0 1 auto; }
     .filament, .time { justify-content: center; }
+  }
+  /* Very narrow (three cards in a one-column section): only what matters. */
+  @container (max-width: 200px) {
+    ha-card { padding: 12px 10px; }
+    .pc { gap: 8px; }
+    .ring { width: min(78cqw, 130px); }
+    .ring circle { stroke-width: 11; }
+    .pct { font-size: clamp(22px, 17cqw, 30px); }
+    .center ha-icon { --mdc-icon-size: 34px; }
+    .center .done ha-icon { --mdc-icon-size: 40px; }
+    .info { gap: 4px; }
+    .top { flex-direction: column; gap: 2px; }
+    .name { font-size: 0.68em; letter-spacing: 0.04em; max-width: 100%; }
+    .chip { display: none; }
+    .job { font-size: 0.95em; line-height: 1.2; }
+    .time { font-size: 0.75em; }
+    .time ha-icon, .time .sep { display: none; }
+    .time > span { display: flex; flex-direction: column; }
+    .filament { font-size: 0.78em; gap: 5px; max-width: 100%; }
+    .filament .label { display: none; }
+    .spool { width: 14px; height: 14px; }
   }
 `;
 

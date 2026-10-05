@@ -126,7 +126,7 @@ show_cover: false        # print preview faintly inside the ring
 
 - While printing, the ring has the colour of the filament in use (white and black get an outline so they stay visible).
 - Finished: full ring with a tick and the name of the finished print. Idle: the loaded spools as colour dots.
-- Narrow sections (3 of 12 columns) switch to a stacked layout automatically.
+- **Width:** by default a third of a section, so three printers fit side by side. Change it per card in the editor's **Layout** tab. The card adapts to any width: stacked when narrow, even more compact when very narrow (chip and icons hidden).
 
 ## Schedule and filament check
 

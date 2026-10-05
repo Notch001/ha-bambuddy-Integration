@@ -3,6 +3,12 @@
 The section of a version becomes its GitHub release notes, which Home Assistant
 shows under **Settings → Updates** when the update is offered.
 
+## 0.14.1
+
+- Printer card: a third of a section by default, so three printers fit side by side.
+  Change the width per card in the editor's *Layout* tab.
+- Printer card: compact look for very narrow widths; remaining and end time on two lines there.
+
 ## 0.14.0
 
 - **New card "Bambuddy Drucker"** (`custom:bambuddy-printer-card`): one printer with a big

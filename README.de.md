@@ -122,7 +122,7 @@ show_cover: false        # Vorschaubild dezent im Ring
 
 - Während des Drucks hat der Ring die Farbe des laufenden Filaments (Weiß und Schwarz bekommen einen Rand, damit sie sichtbar bleiben).
 - Fertig: voller Ring mit Haken und dem Namen des fertigen Drucks. Bereit: die geladenen Spulen als Farbpunkte.
-- In schmalen Abschnitten (3 von 12 Spalten) stapelt sich die Karte automatisch.
+- **Breite:** standardmäßig ein Drittel eines Abschnitts, sodass drei Drucker nebeneinander passen. Pro Karte im Editor im Tab **Layout** änderbar. Die Karte passt sich jeder Breite an: schmal untereinander, sehr schmal noch kompakter (ohne Status-Chip und Symbole).
 
 ## Zeitplan und Filament-Check
 
