@@ -76,7 +76,9 @@ def _printer_state(entity: BambuddyPrinterEntity) -> str | None:
 
 def _current_print(entity: BambuddyPrinterEntity) -> str | None:
     status = entity.status
-    if not is_printing(status):
+    # After a print the name stays until the printer is idle again, so a
+    # dashboard can say what just finished (or failed).
+    if not is_printing(status) and (status or {}).get("state") not in ("FINISH", "FAILED"):
         return None
     return status.get("subtask_name") or status.get("current_print")
 

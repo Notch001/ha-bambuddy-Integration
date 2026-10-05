@@ -4,9 +4,10 @@
  * Shipped and registered by the Bambuddy integration; no separate install.
  * Finds the integration's entities by their translation keys, so it works
  * without any configuration:  type: custom:bambuddy-card
+ * One printer, compact (kitchen dashboards): type: custom:bambuddy-printer-card
  */
 
-const CARD_VERSION = "0.13.0";
+const CARD_VERSION = "0.14.0";
 
 const TEXT = {
   de: {
@@ -63,6 +64,17 @@ const TEXT = {
     filament_missing: "nicht geladen",
     filament_short: "zu wenig Filament",
     low_spool: "Spule fast leer",
+    pc_printer: "Drucker",
+    pc_pick: "Drucker im Karten-Editor auswählen",
+    pc_loaded: "Geladen",
+    pc_no_filament: "Kein Filament geladen",
+    pc_show_time: "Restzeit und Ende anzeigen",
+    pc_show_cover: "Vorschaubild im Ring",
+    pc_ring_color: "Ringfarbe",
+    pc_ring_filament: "Filamentfarbe",
+    pc_ring_state: "Statusfarbe",
+    pc_left: "noch",
+    pc_until: "fertig um",
     printing_n: "drucken",
     waiting_n: "wartend",
     idle_n: "bereit",
@@ -128,6 +140,17 @@ const TEXT = {
     filament_missing: "not loaded",
     filament_short: "not enough filament",
     low_spool: "Spool running low",
+    pc_printer: "Printer",
+    pc_pick: "Choose a printer in the card editor",
+    pc_loaded: "Loaded",
+    pc_no_filament: "No filament loaded",
+    pc_show_time: "Show remaining and end time",
+    pc_show_cover: "Preview image in the ring",
+    pc_ring_color: "Ring colour",
+    pc_ring_filament: "Filament colour",
+    pc_ring_state: "State colour",
+    pc_left: "",
+    pc_until: "done at",
     printing_n: "printing",
     waiting_n: "waiting",
     idle_n: "ready",
@@ -221,6 +244,25 @@ function colorDots(colors) {
     .join("");
 }
 
+// Bambuddy's devices with their entities, keyed by translation key:
+// printers sorted by name, and the hub (queue, statistics).
+function discoverDevices(hass) {
+  const devices = {};
+  for (const entry of Object.values(hass.entities || {})) {
+    if (entry.platform !== "bambuddy" || entry.hidden || !entry.translation_key) continue;
+    const key = `${entry.entity_id.split(".")[0]}.${entry.translation_key}`;
+    const dev = (devices[entry.device_id] ||= { id: entry.device_id, one: {}, many: {} });
+    if (MULTI_KEYS.has(key)) (dev.many[key] ||= []).push(entry.entity_id);
+    else dev.one[key] = entry.entity_id;
+  }
+  const name = (d) => hass.devices?.[d.id]?.name_by_user || hass.devices?.[d.id]?.name || "";
+  const printers = Object.values(devices)
+    .filter((d) => d.one["sensor.printer_state"])
+    .map((d) => ({ ...d, name: name(d) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { printers, hub: Object.values(devices).find((d) => d.one["sensor.queue_pending"]) };
+}
+
 class BambuddyCard extends HTMLElement {
   static getStubConfig() {
     return {};
@@ -298,21 +340,10 @@ class BambuddyCard extends HTMLElement {
   // ---- data -------------------------------------------------------------
 
   _discover() {
-    const devices = {};
-    for (const entry of Object.values(this._hass.entities || {})) {
-      if (entry.platform !== "bambuddy" || entry.hidden || !entry.translation_key) continue;
-      const key = `${entry.entity_id.split(".")[0]}.${entry.translation_key}`;
-      const dev = (devices[entry.device_id] ||= { id: entry.device_id, one: {}, many: {} });
-      if (MULTI_KEYS.has(key)) (dev.many[key] ||= []).push(entry.entity_id);
-      else dev.one[key] = entry.entity_id;
-    }
+    const { printers, hub } = discoverDevices(this._hass);
     const wanted = this._config.printers?.length ? new Set(this._config.printers) : null;
-    const name = (d) => this._hass.devices?.[d.id]?.name_by_user || this._hass.devices?.[d.id]?.name || "";
-    this._printers = Object.values(devices)
-      .filter((d) => d.one["sensor.printer_state"] && (!wanted || wanted.has(d.id)))
-      .map((d) => ({ ...d, name: name(d) }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    this._hub = Object.values(devices).find((d) => d.one["sensor.queue_pending"]);
+    this._printers = printers.filter((d) => !wanted || wanted.has(d.id));
+    this._hub = hub;
   }
 
   _entityIds() {
@@ -1155,11 +1186,255 @@ const WALL_STYLE = `
 // the page) defines the card in the old registry, where the dashboard editor
 // and card picker never look. So: define now, and again in the current
 // registry whenever it has been swapped, for the first minute.
+
+// ---- Printer card: one printer, big progress ring, print name, filament ----
+
+const PRINTER_DEFAULTS = { show_time: false, show_cover: false, ring_color: "filament" };
+
+// Relative luminance of "#rrggbb" (0 = black, 1 = white), null if not a colour.
+function luminance(hex) {
+  const m = /^#?([0-9a-f]{6})/i.exec(hex || "");
+  if (!m) return null;
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(m[1].slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+class BambuddyPrinterCard extends HTMLElement {
+  static getStubConfig(hass) {
+    // A printing printer makes the nicest preview in the card picker.
+    const printers = hass ? discoverDevices(hass).printers : [];
+    const busy = printers.find((p) => PRINTING_STATES.has(hass.states[p.one["sensor.printer_state"]]?.state));
+    const pick = busy || printers[0];
+    return pick ? { printer: pick.id } : {};
+  }
+
+  static getConfigForm() {
+    const t = TEXT[lang()];
+    return {
+      schema: [
+        { name: "printer", required: true, selector: { device: { filter: { integration: "bambuddy", manufacturer: "Bambu Lab" } } } },
+        {
+          name: "ring_color",
+          default: PRINTER_DEFAULTS.ring_color,
+          selector: {
+            select: {
+              mode: "box",
+              options: [
+                { value: "filament", label: t.pc_ring_filament },
+                { value: "state", label: t.pc_ring_state },
+              ],
+            },
+          },
+        },
+        {
+          type: "grid",
+          name: "",
+          schema: ["show_time", "show_cover"].map((name) => ({ name, default: PRINTER_DEFAULTS[name], selector: { boolean: {} } })),
+        },
+      ],
+      computeLabel: (schema) => t[`pc_${schema.name}`] ?? schema.name,
+    };
+  }
+
+  setConfig(config) {
+    this._config = { ...PRINTER_DEFAULTS, ...(config || {}) };
+    this._signature = null;
+    if (this._hass) this._update();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._update();
+  }
+
+  getCardSize() {
+    return 3;
+  }
+
+  getGridOptions() {
+    return { columns: 6, min_columns: 3 };
+  }
+
+  connectedCallback() {
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    if (this._hass) this._update();
+  }
+
+  _update() {
+    if (!this._config || !this._hass || !this.shadowRoot) return;
+    const { printers } = discoverDevices(this._hass);
+    this._printer = printers.find((d) => d.id === this._config.printer) || (this._config.printer ? null : printers[0]);
+    const p = this._printer;
+    const ids = p ? [...Object.values(p.one), ...Object.values(p.many).flat()] : [];
+    const signature = ids.map((id) => `${id}:${this._hass.states[id]?.last_updated}`).join("|") + `|${this._hass.language}|${p?.name}`;
+    if (signature === this._signature) return;
+    this._signature = signature;
+    this._render();
+  }
+
+  _state(key) {
+    const id = this._printer?.one[key];
+    return id ? this._hass.states[id] : undefined;
+  }
+
+  _spools() {
+    const p = this._printer;
+    return [...(p.many["sensor.ams_tray"] || []), ...(p.many["sensor.external_spool"] || []), ...(p.many["sensor.external_spool_n"] || [])]
+      .map((id) => this._hass.states[id])
+      .filter((s) => s && !["empty", "unknown", "unavailable"].includes(s.state));
+  }
+
+  _render() {
+    const t = TEXT[lang()];
+    if (!this._printer) {
+      this.shadowRoot.innerHTML = `<style>${PRINTER_STYLE}</style><ha-card><div class="pick">
+        <ha-icon icon="mdi:printer-3d"></ha-icon><span>${esc(t.pc_pick)}</span></div></ha-card>`;
+      return;
+    }
+    const fmt = (st) => (st ? (this._hass.formatEntityState ? this._hass.formatEntityState(st) : st.state) : "");
+    const stateObj = this._state("sensor.printer_state");
+    const state = stateObj?.state || "unavailable";
+    const printing = PRINTING_STATES.has(state);
+    const done = state === "finish";
+    const known = (v) => v && !["unknown", "unavailable"].includes(v);
+    const job = this._state("sensor.current_print")?.state;
+    const progress = done ? 100 : printing ? num(this._state("sensor.progress")) ?? 0 : 0;
+
+    const spools = this._spools();
+    const active = spools.find((s) => s.attributes.active);
+    const stateColor = STATE_COLORS[state] || "var(--secondary-text-color)";
+    const filamentColor = active?.attributes?.color;
+    const useFilament = this._config.ring_color === "filament" && printing && /^#[0-9a-f]{6}$/i.test(filamentColor || "");
+    const ringColor = useFilament ? filamentColor : stateColor;
+    const lum = useFilament ? luminance(filamentColor) : null;
+    // White or black filament would vanish against the card: give it an outline.
+    const outline = lum != null && (lum > 0.75 || lum < 0.02);
+
+    const r = 52;
+    const c = 2 * Math.PI * r;
+    const p = Math.min(100, Math.max(0, progress));
+    const dash = `stroke-dasharray="${(c * p) / 100} ${c}"`;
+    const cover = this._config.show_cover && printing ? this._state("image.cover")?.attributes?.entity_picture : null;
+    const center = printing
+      ? `<span class="pct">${Math.round(p)}<small>%</small></span>`
+      : done
+        ? `<span class="done" style="color:${stateColor}"><ha-icon icon="mdi:check-bold"></ha-icon></span>`
+        : `<ha-icon icon="${state === "offline" ? "mdi:printer-3d-off" : "mdi:printer-3d"}"></ha-icon>`;
+    const ring = `<div class="ring">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="${r}" class="track"/>
+        ${p > 0 && outline ? `<circle cx="60" cy="60" r="${r}" class="outline" ${dash} transform="rotate(-90 60 60)"/>` : ""}
+        ${p > 0 ? `<circle cx="60" cy="60" r="${r}" class="bar" style="stroke:${esc(ringColor)}" ${dash} transform="rotate(-90 60 60)"/>` : ""}
+      </svg>
+      ${cover ? `<img class="cover" src="${esc(cover)}" alt="">` : ""}
+      <div class="center">${center}</div>
+    </div>`;
+
+    // With a job the state goes into the chip; without one it is the title.
+    const hasJob = known(job) && (printing || done || state === "failed");
+    const title = hasJob ? job : fmt(stateObj);
+    let time = "";
+    if (this._config.show_time && printing) {
+      const remaining = num(this._state("sensor.remaining_time"));
+      const end = this._state("sensor.end_time")?.state;
+      const endDate = known(end) ? new Date(end) : null;
+      const endText = endDate && !isNaN(endDate)
+        ? endDate.toLocaleTimeString(this._hass.locale?.language || undefined, { hour: "2-digit", minute: "2-digit" })
+        : "";
+      const parts = [remaining != null ? `${t.pc_left} ${formatMinutes(remaining)}`.trim() : "", endText ? `${t.pc_until} ${endText}` : ""].filter(Boolean);
+      if (parts.length) time = `<div class="time"><ha-icon icon="mdi:timer-sand"></ha-icon><span>${esc(parts.join(" · "))}</span></div>`;
+    }
+
+    const dot = (col) =>
+      /^#[0-9a-f]{6}$/i.test(col || "") ? `<span class="spool" style="--spool:${col}"></span>` : `<span class="spool unknown"></span>`;
+    let filament;
+    if (active) {
+      filament = `<div class="filament">${dot(active.attributes.color)}<span>${esc(fmt(active))}</span></div>`;
+    } else if (spools.length) {
+      filament = `<div class="filament loaded"><span class="label">${esc(t.pc_loaded)}</span>${spools
+        .map((s) => `<span title="${esc(fmt(s))}">${dot(s.attributes.color)}</span>`)
+        .join("")}</div>`;
+    } else {
+      filament = `<div class="filament none"><span>${esc(t.pc_no_filament)}</span></div>`;
+    }
+
+    this.shadowRoot.innerHTML = `<style>${PRINTER_STYLE}</style>
+      <ha-card class="${printing ? "printing" : ""}" style="--accent:${stateColor}">
+        <div class="pc">
+          ${ring}
+          <div class="info">
+            <div class="top"><span class="name">${esc(this._printer.name)}</span>
+              ${hasJob ? `<span class="chip">${esc(fmt(stateObj))}</span>` : ""}</div>
+            <div class="job${hasJob ? "" : " idle"}">${esc(title)}</div>
+            ${time}
+            ${filament}
+          </div>
+        </div>
+      </ha-card>`;
+  }
+}
+
+const PRINTER_STYLE = `
+  :host { display: block; }
+  ha-card { display: block; padding: 16px; height: 100%; box-sizing: border-box; container-type: inline-size; overflow: hidden; }
+  .pc { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
+  .ring { position: relative; width: clamp(104px, 34cqw, 150px); aspect-ratio: 1; }
+  .ring svg { width: 100%; height: 100%; display: block; }
+  .ring circle { fill: none; stroke-width: 10; }
+  .ring .track { stroke: color-mix(in srgb, var(--primary-text-color) 9%, transparent); }
+  .ring .bar { stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+  .ring .outline { stroke: color-mix(in srgb, var(--primary-text-color) 28%, transparent); stroke-width: 13; stroke-linecap: round; }
+  .ring .cover { position: absolute; inset: 24%; width: 52%; height: 52%; object-fit: contain; opacity: 0.14; border-radius: 50%; }
+  .center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .center ha-icon { --mdc-icon-size: 44px; color: var(--secondary-text-color); }
+  .center .done ha-icon { --mdc-icon-size: 52px; color: inherit; }
+  .pct { font-size: clamp(28px, 10cqw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--primary-text-color); }
+  .pct small { font-size: 0.45em; font-weight: 500; margin-left: 1px; color: var(--secondary-text-color); }
+  .info { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .name { flex: 1; min-width: 0; font-size: 0.8em; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip { flex: none; font-size: 0.75em; font-weight: 500; padding: 2px 10px; border-radius: 999px;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .job { font-size: clamp(1.1em, 5cqw, 1.45em); font-weight: 500; line-height: 1.25; color: var(--primary-text-color);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .job.idle { color: var(--secondary-text-color); }
+  .time { display: flex; align-items: center; gap: 6px; font-size: 0.9em; color: var(--secondary-text-color); }
+  .time ha-icon { --mdc-icon-size: 16px; }
+  .filament { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.95em; color: var(--primary-text-color); }
+  .filament > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .filament.loaded { gap: 6px; flex-wrap: wrap; }
+  .filament .label, .filament.none { color: var(--secondary-text-color); font-size: 0.9em; }
+  .spool { flex: none; display: inline-block; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box;
+    background: radial-gradient(circle, var(--card-background-color, #fff) 0 22%, var(--spool) 24%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 22%, transparent); vertical-align: middle; }
+  .spool.unknown { --spool: var(--disabled-text-color, #bbb); }
+  .pick { display: flex; align-items: center; gap: 10px; color: var(--secondary-text-color); }
+  @container (max-width: 300px) {
+    .pc { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 12px; }
+    .ring { width: min(70cqw, 170px); }
+    .info { align-items: center; width: 100%; }
+    .top { justify-content: center; }
+    .name { flex: 0 1 auto; }
+    .filament, .time { justify-content: center; }
+  }
+`;
+
 function registerCard() {
   const registry = window.customElements;
   if (!registry.get("bambuddy-card")) {
     try {
       registry.define("bambuddy-card", class extends BambuddyCard {});
+    } catch (err) {
+      // Defined in the meantime by another copy of this file: fine.
+    }
+  }
+  if (!registry.get("bambuddy-printer-card")) {
+    try {
+      registry.define("bambuddy-printer-card", class extends BambuddyPrinterCard {});
     } catch (err) {
       // Defined in the meantime by another copy of this file: fine.
     }
@@ -1170,6 +1445,15 @@ function registerCard() {
       type: "bambuddy-card",
       name: "Bambuddy",
       description: "Drucker, AMS und Warteschlange aus Bambuddy auf einen Blick.",
+      preview: true,
+      documentationURL: "https://github.com/Notch001/ha-bambuddy-integration",
+    });
+  }
+  if (!window.customCards.some((c) => c.type === "bambuddy-printer-card")) {
+    window.customCards.push({
+      type: "bambuddy-printer-card",
+      name: "Bambuddy Drucker",
+      description: "Ein Drucker groß: Fortschritt, Druckname und geladenes Filament.",
       preview: true,
       documentationURL: "https://github.com/Notch001/ha-bambuddy-integration",
     });

@@ -41,7 +41,9 @@ async def test_card_is_served(hass: HomeAssistant, aioclient_mock, hass_client) 
     client = await hass_client()
     resp = await client.get("/bambuddy/bambuddy-card.js")
     assert resp.status == 200
-    assert "registry.define(\"bambuddy-card\"" in await resp.text()
+    text = await resp.text()
+    assert "registry.define(\"bambuddy-card\"" in text
+    assert "registry.define(\"bambuddy-printer-card\"" in text
 
 
 async def test_card_registered_as_dashboard_resource(hass: HomeAssistant, aioclient_mock) -> None:

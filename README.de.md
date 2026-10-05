@@ -106,6 +106,24 @@ queue_limit: 5               # max. Aufträge je Liste
 
 - **Eine Karte pro Drucker:** Karte mehrmals hinzufügen, in jeder einen Drucker wählen und `show_queue` bei allen außer einer ausschalten.
 
+## Drucker-Karte (ein Drucker)
+
+Eine zweite, schlichte Karte für Küche oder Flur: ein Drucker, ein großer Fortschrittsring, der Druckname und das Filament, das gerade läuft. Pro Drucker einmal hinzufügen: **Karte hinzufügen** → **Bambuddy Drucker** → Drucker auswählen.
+
+<img src="docs/printer-card.png" alt="Drucker-Karte (Beispieldaten)" width="640">
+
+```yaml
+type: custom:bambuddy-printer-card
+printer: <Geräte-ID>     # wird im Editor ausgewählt
+ring_color: filament     # filament | state
+show_time: false         # Restzeit und Ende anzeigen
+show_cover: false        # Vorschaubild dezent im Ring
+```
+
+- Während des Drucks hat der Ring die Farbe des laufenden Filaments (Weiß und Schwarz bekommen einen Rand, damit sie sichtbar bleiben).
+- Fertig: voller Ring mit Haken und dem Namen des fertigen Drucks. Bereit: die geladenen Spulen als Farbpunkte.
+- In schmalen Abschnitten (3 von 12 Spalten) stapelt sich die Karte automatisch.
+
 ## Zeitplan und Filament-Check
 
 So wird geschätzt: Ein Drucker ist belegt, bis die Restzeit seines Drucks abgelaufen ist; danach folgen seine wartenden Aufträge nacheinander (mit ihrer Druckdauer und ggf. geplanter Startzeit). Aufträge für „beliebiger <Modell>“ gehen an den Drucker dieses Modells, der zuerst frei wird. Es sind Schätzungen – Filamentwechsel, Platte räumen oder ein Fehldruck verschieben sie.
@@ -153,7 +171,7 @@ Die Warteschlangen-Aktionen brauchen „Warteschlange verwalten“. In der To-do
 | Entität | Beschreibung |
 |---|---|
 | Status | Bereit, Vorbereitung, Druckt, Pausiert, Fertig, Fehlgeschlagen, Offline |
-| Aktueller Druck, Druckphase | Dateiname; z. B. „Heatbed preheating“ |
+| Aktueller Druck, Druckphase | Dateiname (bleibt nach fertigem oder abgebrochenem Druck stehen, bis der Drucker wieder bereit ist); z. B. „Heatbed preheating“ |
 | Fortschritt, Restzeit, Voraussichtliches Ende | %, Minuten, Uhrzeit |
 | Frei ab | wann alles für den Drucker Geplante fertig ist; Attribut `schedule` |
 | Aktuelle Schicht, Schichten gesamt | |

@@ -3,6 +3,13 @@
 The section of a version becomes its GitHub release notes, which Home Assistant
 shows under **Settings → Updates** when the update is offered.
 
+## 0.14.0
+
+- **New card "Bambuddy Drucker"** (`custom:bambuddy-printer-card`): one printer with a big
+  progress ring in the colour of the filament in use, the print name and the loaded filament.
+  Made for kitchen and hallway dashboards; add it once per printer.
+- "Current print" keeps the name of a finished or failed print until the printer is idle again.
+
 ## 0.13.0
 
 - **Spool warning:** new binary sensor "Filament low" per printer. It turns on when an AMS

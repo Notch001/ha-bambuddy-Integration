@@ -1,5 +1,7 @@
 """Entity tests against a fake Bambuddy."""
 
+import copy
+
 from homeassistant.const import CONF_URL, CONF_VERIFY_SSL, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -7,7 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.bambuddy.const import CONF_API_KEY, DOMAIN
 
-from .conftest import API_KEY, URL, mock_bambuddy
+from .conftest import API_KEY, STATUS, URL, mock_bambuddy
 
 
 async def _setup(hass: HomeAssistant) -> MockConfigEntry:
@@ -106,3 +108,16 @@ async def test_auth_failure_starts_reauth(hass: HomeAssistant, aioclient_mock) -
     await hass.async_block_till_done()
     flows = hass.config_entries.flow.async_progress()
     assert any(f["context"]["source"] == "reauth" for f in flows)
+
+
+async def test_current_print_kept_after_finish(hass: HomeAssistant, aioclient_mock) -> None:
+    """The dashboard can say what just finished; idle clears it."""
+    status = copy.deepcopy(STATUS)
+    status[1]["state"] = "FINISH"
+    status[2] = {**status[2], "state": "IDLE", "subtask_name": "Old"}
+    mock_bambuddy(aioclient_mock, status=status)
+    await _setup(hass)
+
+    assert _state(hass, "sensor", "00M09A111111111_current_print").state == "Benchy"
+    assert _state(hass, "sensor", "00M09A111111111_progress").state == "unknown"
+    assert _state(hass, "sensor", "0300AA222222222_current_print").state == "unknown"

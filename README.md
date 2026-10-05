@@ -110,6 +110,24 @@ queue_limit: 5               # max. jobs per list
 
 - **One card per printer:** add the card several times, pick one printer in each and switch off `show_queue` in all but one.
 
+## Printer card (one printer)
+
+A second, simple card for kitchen or hallway dashboards: one printer, a big progress ring, the print name and the filament in use. Add it once per printer: **Add card** → **Bambuddy Drucker** → pick the printer.
+
+<img src="docs/printer-card.png" alt="Printer card (sample data)" width="640">
+
+```yaml
+type: custom:bambuddy-printer-card
+printer: <device id>     # chosen in the editor
+ring_color: filament     # filament | state
+show_time: false         # remaining time and end time
+show_cover: false        # print preview faintly inside the ring
+```
+
+- While printing, the ring has the colour of the filament in use (white and black get an outline so they stay visible).
+- Finished: full ring with a tick and the name of the finished print. Idle: the loaded spools as colour dots.
+- Narrow sections (3 of 12 columns) switch to a stacked layout automatically.
+
 ## Schedule and filament check
 
 How the estimate works: a printer is busy until its print's remaining time is over, then its waiting jobs follow one after another (using their print time and any scheduled start). Jobs for "any <model>" go to whichever printer of that model is free first. These are estimates – changing filament, clearing the plate or a failed print shift them.
@@ -157,7 +175,7 @@ The queue actions need "Manage Queue". In the to-do list "Print queue" you can d
 | Entity | Description |
 |---|---|
 | Status | Idle, Preparing, Printing, Paused, Finished, Failed, Offline |
-| Current print, Print stage | file name; e.g. "Heatbed preheating" |
+| Current print, Print stage | file name (kept after the print finished or failed until the printer is idle again); e.g. "Heatbed preheating" |
 | Progress, Remaining time, Estimated end | %, minutes, timestamp |
 | Free from | when everything planned for the printer is done; attribute `schedule` |
 | Current layer, Total layers | |
