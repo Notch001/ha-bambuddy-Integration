@@ -1,0 +1,134 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bambuddy",
+        "description": "Verbinde Home Assistant mit deinem Bambuddy-Server.",
+        "data": {
+          "url": "Bambuddy-Adresse",
+          "api_key": "API-Key",
+          "verify_ssl": "SSL-Zertifikat prüfen"
+        },
+        "data_description": {
+          "url": "Zum Beispiel http://192.168.1.50:8000 – dieselbe Adresse, die du im Browser für Bambuddy nutzt.",
+          "api_key": "In Bambuddy unter Einstellungen → API-Schlüssel anlegen (Recht „Status lesen“ genügt). Leer lassen, wenn in Bambuddy keine Anmeldung aktiv ist."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Bambuddy: API-Key erneuern",
+        "description": "Bambuddy unter {url} hat den API-Key abgelehnt. Bitte gib einen gültigen API-Key ein.",
+        "data": {
+          "api_key": "API-Key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Bambuddy ist unter dieser Adresse nicht erreichbar.",
+      "invalid_auth": "Der API-Key fehlt, ist ungültig oder hat nicht das Recht „Status lesen“.",
+      "unknown": "Unerwarteter Fehler, siehe Home-Assistant-Protokoll."
+    },
+    "abort": {
+      "already_configured": "Dieser Bambuddy-Server ist bereits eingerichtet.",
+      "reauth_successful": "API-Key wurde aktualisiert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bambuddy-Optionen",
+        "data": {
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "printer_state": {
+        "name": "Status",
+        "state": {
+          "idle": "Bereit",
+          "prepare": "Vorbereitung",
+          "slicing": "Slicen",
+          "running": "Druckt",
+          "pause": "Pausiert",
+          "finish": "Fertig",
+          "failed": "Fehlgeschlagen",
+          "offline": "Offline",
+          "unknown": "Unbekannt"
+        }
+      },
+      "current_print": {
+        "name": "Aktueller Druck"
+      },
+      "progress": {
+        "name": "Fortschritt"
+      },
+      "remaining_time": {
+        "name": "Restzeit"
+      },
+      "end_time": {
+        "name": "Voraussichtliches Ende"
+      },
+      "current_layer": {
+        "name": "Aktuelle Schicht"
+      },
+      "total_layers": {
+        "name": "Schichten gesamt"
+      },
+      "nozzle_temperature": {
+        "name": "Düsentemperatur"
+      },
+      "nozzle_target_temperature": {
+        "name": "Düse Zieltemperatur"
+      },
+      "nozzle_2_temperature": {
+        "name": "Düsentemperatur 2"
+      },
+      "bed_temperature": {
+        "name": "Betttemperatur"
+      },
+      "bed_target_temperature": {
+        "name": "Bett Zieltemperatur"
+      },
+      "chamber_temperature": {
+        "name": "Bauraumtemperatur"
+      },
+      "printer_queue": {
+        "name": "Warteschlange"
+      },
+      "hms_errors": {
+        "name": "Fehlermeldungen"
+      },
+      "wifi_signal": {
+        "name": "WLAN-Signal"
+      },
+      "firmware": {
+        "name": "Firmware"
+      },
+      "queue_pending": {
+        "name": "Wartende Druckaufträge"
+      },
+      "queue_printing": {
+        "name": "Laufende Druckaufträge"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "printing": {
+        "name": "Druckt"
+      },
+      "error": {
+        "name": "Fehler"
+      },
+      "awaiting_plate_clear": {
+        "name": "Druckplatte räumen"
+      },
+      "door": {
+        "name": "Tür"
+      }
+    }
+  }
+}

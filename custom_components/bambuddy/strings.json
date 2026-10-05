@@ -1,0 +1,134 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bambuddy",
+        "description": "Connect Home Assistant to your Bambuddy server.",
+        "data": {
+          "url": "Bambuddy URL",
+          "api_key": "API key",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "url": "For example http://192.168.1.50:8000 – the same address you open Bambuddy with in your browser.",
+          "api_key": "Create one in Bambuddy under Settings → API keys (the \"read status\" permission is enough). Leave empty if Bambuddy has authentication disabled."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Bambuddy: renew API key",
+        "description": "Bambuddy at {url} rejected the API key. Please enter a valid API key.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Bambuddy cannot be reached at this address.",
+      "invalid_auth": "The API key is missing, invalid or lacks the \"read status\" permission.",
+      "unknown": "Unexpected error, see the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This Bambuddy server is already configured.",
+      "reauth_successful": "API key updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bambuddy options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "printer_state": {
+        "name": "Status",
+        "state": {
+          "idle": "Idle",
+          "prepare": "Preparing",
+          "slicing": "Slicing",
+          "running": "Printing",
+          "pause": "Paused",
+          "finish": "Finished",
+          "failed": "Failed",
+          "offline": "Offline",
+          "unknown": "Unknown"
+        }
+      },
+      "current_print": {
+        "name": "Current print"
+      },
+      "progress": {
+        "name": "Progress"
+      },
+      "remaining_time": {
+        "name": "Remaining time"
+      },
+      "end_time": {
+        "name": "Estimated end"
+      },
+      "current_layer": {
+        "name": "Current layer"
+      },
+      "total_layers": {
+        "name": "Total layers"
+      },
+      "nozzle_temperature": {
+        "name": "Nozzle temperature"
+      },
+      "nozzle_target_temperature": {
+        "name": "Nozzle target temperature"
+      },
+      "nozzle_2_temperature": {
+        "name": "Nozzle 2 temperature"
+      },
+      "bed_temperature": {
+        "name": "Bed temperature"
+      },
+      "bed_target_temperature": {
+        "name": "Bed target temperature"
+      },
+      "chamber_temperature": {
+        "name": "Chamber temperature"
+      },
+      "printer_queue": {
+        "name": "Queue"
+      },
+      "hms_errors": {
+        "name": "Errors"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signal"
+      },
+      "firmware": {
+        "name": "Firmware"
+      },
+      "queue_pending": {
+        "name": "Queued print jobs"
+      },
+      "queue_printing": {
+        "name": "Running print jobs"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "printing": {
+        "name": "Printing"
+      },
+      "error": {
+        "name": "Error"
+      },
+      "awaiting_plate_clear": {
+        "name": "Clear build plate"
+      },
+      "door": {
+        "name": "Door"
+      }
+    }
+  }
+}
