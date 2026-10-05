@@ -20,10 +20,14 @@ async def test_queue_todo_list(hass: HomeAssistant, aioclient_mock) -> None:
     )
     items = result[entity_id]["items"]
     assert [i["summary"] for i in items] == ["▶ Benchy", "1. Schlüsselanhänger", "2. Halterung"]
-    assert items[1]["description"] == "Any A1 Mini · 15 min"
-    assert items[2]["description"] == "X1C Werkstatt · 60 min · PETG"
-    # Read-only: Home Assistant must not offer editing
-    assert hass.states.get(entity_id).attributes.get("supported_features", 0) == 0
+    # Printer, duration, filament, then the estimated time window
+    assert items[1]["description"].startswith("Any A1 Mini · 15 min · ⏱ ")
+    assert items[2]["description"].startswith("X1C Werkstatt · 60 min · PETG · ⏱ ")
+    # Reorder and delete, but no ticking off
+    from homeassistant.components.todo import TodoListEntityFeature
+
+    features = hass.states.get(entity_id).attributes["supported_features"]
+    assert features == TodoListEntityFeature.MOVE_TODO_ITEM | TodoListEntityFeature.DELETE_TODO_ITEM
 
 
 async def test_card_is_served(hass: HomeAssistant, aioclient_mock, hass_client) -> None:

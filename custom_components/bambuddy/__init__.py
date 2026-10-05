@@ -20,8 +20,9 @@ from homeassistant.loader import async_get_integration
 
 from .api import BambuddyApiClient
 from .const import CONF_API_KEY, DOMAIN
-from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
+from .coordinator import BambuddyConfigEntry, BambuddyCoordinator, BambuddyStatsCoordinator
 from .entity import hub_device_info
+from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.CAMERA,
+    Platform.EVENT,
     Platform.IMAGE,
     Platform.LIGHT,
     Platform.SELECT,
@@ -44,10 +46,13 @@ CARD_URL = "/bambuddy/bambuddy-card.js"
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve the dashboard card and make every dashboard load it."""
     if getattr(hass, "http", None) is None:
+        async_setup_services(hass)
         return True
     await hass.http.async_register_static_paths(
         [StaticPathConfig(CARD_URL, str(Path(__file__).parent / "frontend" / "bambuddy-card.js"), True)]
     )
+    async_setup_services(hass)
+
     # The version makes browsers fetch the new card after an update.
     url = f"{CARD_URL}?v={(await async_get_integration(hass, DOMAIN)).version}"
 
@@ -99,6 +104,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> 
 
     coordinator = BambuddyCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
+    # Statistics are a bonus: an older Bambuddy without them must not stop setup.
+    coordinator.stats = BambuddyStatsCoordinator(hass, entry, client)
+    await coordinator.stats.async_refresh()
     entry.runtime_data = coordinator
 
     # Printers hang off the Bambuddy device (via_device), so it must exist

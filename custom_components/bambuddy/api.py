@@ -37,6 +37,8 @@ async def _error_detail(resp: aiohttp.ClientResponse) -> str:
         detail = None
     if isinstance(detail, dict):
         detail = detail.get("message")
+    elif isinstance(detail, list):  # FastAPI validation errors
+        detail = "; ".join(str(d.get("msg", d)) if isinstance(d, dict) else str(d) for d in detail)
     return str(detail or f"HTTP {resp.status}")
 
 
@@ -81,6 +83,7 @@ class BambuddyApiClient:
         path: str,
         params: dict[str, Any] | None = None,
         *,
+        json: Any = None,
         raw: bool = False,
         timeout: float = REQUEST_TIMEOUT.total_seconds(),
     ) -> Any:
@@ -90,7 +93,7 @@ class BambuddyApiClient:
         try:
             async with asyncio.timeout(timeout):
                 async with self._session.request(
-                    method, url, headers=headers, params=params
+                    method, url, headers=headers, params=params, json=json
                 ) as resp:
                     if resp.status in (401, 403):
                         raise BambuddyAuthError(
@@ -98,7 +101,7 @@ class BambuddyApiClient:
                         )
                     if resp.status == 404:
                         raise BambuddyNotFoundError(f"{url} not found")
-                    if resp.status == 400:
+                    if resp.status in (400, 409, 410, 422):
                         raise BambuddyRequestError(await _error_detail(resp))
                     resp.raise_for_status()
                     if raw:
@@ -126,6 +129,36 @@ class BambuddyApiClient:
         """Return queue items, optionally filtered by status."""
         params = {"status": status} if status else None
         return await self._get("/queue/", params=params)
+
+    async def get_stats(self, date_from: str | None = None) -> dict[str, Any]:
+        """Print statistics from Bambuddy's print log (ISO date, inclusive)."""
+        return await self._get("/archives/stats", {"date_from": date_from} if date_from else None)
+
+    async def get_ui_flags(self) -> dict[str, Any]:
+        """Install-wide display settings; carries the currency."""
+        return await self._get("/settings/ui-flags")
+
+    async def list_archives(self, limit: int = 200) -> list[dict[str, Any]]:
+        return await self._get("/archives/", {"limit": limit})
+
+    async def list_library_files(self) -> list[dict[str, Any]]:
+        return await self._get("/library/files/", {"recursive": "true"})
+
+    async def add_job(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", "/queue/", json=payload)
+
+    async def reorder_queue(self, positions: list[tuple[int, int]]) -> None:
+        await self._request(
+            "POST",
+            "/queue/reorder",
+            json={"items": [{"id": job_id, "position": pos} for job_id, pos in positions]},
+        )
+
+    async def cancel_job(self, job_id: int) -> None:
+        await self._post(f"/queue/{job_id}/cancel")
+
+    async def start_job(self, job_id: int) -> None:
+        await self._post(f"/queue/{job_id}/start")
 
     async def get_color_map(self) -> dict[str, Any]:
         """Bambuddy's colour names: {"colors": {hex: name}, "by_material": {"material|hex": name}}."""

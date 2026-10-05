@@ -1,0 +1,158 @@
+blueprint:
+  name: "Bambuddy: print notifications"
+  description: >-
+    Push notifications to your phone when a print starts, finishes or fails,
+    when the build plate has to be cleared, or when a printer reports an error.
+    The "clear the build plate" notification can carry a **Cleared** button: tap
+    it and Bambuddy starts the next job in the queue.
+
+
+    Benachrichtigungen aufs Handy bei Druckstart, -ende, Fehlschlag, Fehlern und
+    wenn die Druckplatte geräumt werden muss – optional mit Knopf **Geräumt**,
+    der den nächsten Auftrag freigibt.
+  domain: automation
+  author: Notch001
+  homeassistant:
+    min_version: "2025.3.0"
+  source_url: https://github.com/Notch001/ha-bambuddy-integration/blob/main/blueprints/automation/bambuddy/print_notifications.yaml
+  input:
+    printer_events:
+      name: Printers / Drucker
+      description: The "Print event" entities of the printers to watch.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: bambuddy
+              domain: event
+    notify_device:
+      name: Phone / Handy
+      description: Device with the Home Assistant companion app.
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+    events:
+      name: Notify about / Benachrichtigen bei
+      default:
+        - print_finished
+        - print_failed
+        - plate_clear_required
+        - error
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Print started / Druck gestartet
+              value: print_started
+            - label: Print finished / Druck fertig
+              value: print_finished
+            - label: Print failed / Druck fehlgeschlagen
+              value: print_failed
+            - label: Clear build plate / Druckplatte räumen
+              value: plate_clear_required
+            - label: Error / Fehler
+              value: error
+    clear_button:
+      name: '"Cleared" button / Knopf "Geräumt"'
+      description: >-
+        Adds a button to the "clear build plate" notification. Needs the API
+        key permission "Control Printer".
+      default: true
+      selector:
+        boolean:
+    language:
+      name: Language / Sprache
+      default: de
+      selector:
+        select:
+          options:
+            - label: Deutsch
+              value: de
+            - label: English
+              value: en
+
+mode: parallel
+max: 20
+
+triggers:
+  - trigger: state
+    entity_id: !input printer_events
+
+variables:
+  wanted: !input events
+  lang: !input language
+  offer_clear: !input clear_button
+  attrs: "{{ dict(trigger.to_state.attributes) if trigger.to_state else {} }}"
+  event_type: "{{ attrs.get('event_type') or '' }}"
+  printer_device: "{{ device_id(trigger.entity_id) }}"
+  printer: "{{ attrs.get('printer') or device_attr(printer_device, 'name') }}"
+  job: "{{ attrs.get('job') or '' }}"
+  next_job: "{{ attrs.get('next_job') or '' }}"
+  texts:
+    de:
+      print_started: ["{p} druckt", "{j} wurde gestartet."]
+      print_finished: ["{p} ist fertig", "{j} ist fertig."]
+      print_failed: ["{p}: Druck fehlgeschlagen", "{j} ist fehlgeschlagen."]
+      plate_clear_required: ["{p}: Druckplatte räumen", "Bitte die Druckplatte räumen."]
+      error: ["{p}: Fehler", "Der Drucker meldet einen Fehler. Details in Bambuddy."]
+      next: "Als Nächstes: {n}"
+      cleared: "Geräumt"
+    en:
+      print_started: ["{p} is printing", "{j} has started."]
+      print_finished: ["{p} is done", "{j} has finished."]
+      print_failed: ["{p}: print failed", "{j} has failed."]
+      plate_clear_required: ["{p}: clear the build plate", "Please clear the build plate."]
+      error: ["{p}: error", "The printer reports an error. Details in Bambuddy."]
+      next: "Up next: {n}"
+      cleared: "Cleared"
+  t: "{{ texts[lang] }}"
+  title: "{{ t[event_type][0] | replace('{p}', printer) if event_type in t else '' }}"
+  message: >-
+    {%- set m = t[event_type][1] | replace('{j}', job or printer) if event_type in t else '' -%}
+    {%- if next_job and event_type in ['print_finished', 'plate_clear_required'] -%}
+      {{ m }} {{ t.next | replace('{n}', next_job) }}
+    {%- else -%}{{ m }}{%- endif -%}
+  action_id: "BAMBUDDY_CLEARED_{{ trigger.to_state.context.id }}"
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none
+         and trigger.from_state.state != 'unavailable'
+         and trigger.to_state.state not in ['unavailable', 'unknown']
+         and event_type in wanted }}
+
+actions:
+  - if:
+      - condition: template
+        value_template: "{{ offer_clear and event_type == 'plate_clear_required' }}"
+    then:
+      - domain: mobile_app
+        type: notify
+        device_id: !input notify_device
+        title: "{{ title }}"
+        message: "{{ message }}"
+        data:
+          tag: "bambuddy-plate-{{ printer_device }}"
+          actions:
+            - action: "{{ action_id }}"
+              title: "{{ t.cleared }}"
+      - wait_for_trigger:
+          - trigger: event
+            event_type: mobile_app_notification_action
+            event_data:
+              action: "{{ action_id }}"
+        timeout: "24:00:00"
+        continue_on_timeout: false
+      - action: bambuddy.clear_plate
+        data:
+          device_id: "{{ printer_device }}"
+    else:
+      - domain: mobile_app
+        type: notify
+        device_id: !input notify_device
+        title: "{{ title }}"
+        message: "{{ message }}"
+        data:
+          tag: "bambuddy-{{ event_type }}-{{ printer_device }}"

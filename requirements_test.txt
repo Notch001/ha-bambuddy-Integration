@@ -1,2 +1,10 @@
 pytest-homeassistant-custom-component
 PyTurboJPEG
+# for the notification blueprint test (mobile_app)
+hassil
+home-assistant-intents
+mutagen
+ha-ffmpeg
+pymicro-vad
+pyspeex-noise
+PyNaCl

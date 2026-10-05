@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.8.0";
+const CARD_VERSION = "0.9.0";
 
 const TEXT = {
   de: {
@@ -40,6 +40,22 @@ const TEXT = {
     show_printer_queue: "Warteschlange je Drucker",
     queue_limit: "Max. Aufträge je Liste",
     up_next: "Als Nächstes",
+    timeline: "Zeitplan",
+    all_done: "Alles fertig",
+    all_free: "Alle Drucker frei",
+    now: "Jetzt",
+    free: "frei",
+    approx: "ca.",
+    filament_missing: "nicht geladen",
+    filament_short: "zu wenig Filament",
+    printing_n: "drucken",
+    waiting_n: "wartend",
+    idle_n: "bereit",
+    layout: "Darstellung",
+    layout_card: "Karte",
+    layout_wall: "Wandtablet",
+    show_timeline: "Zeitplan",
+    show_filament_check: "Filament-Check",
     collapse_queue: "Listen anfangs eingeklappt",
     other_jobs: "Weitere Aufträge",
   },
@@ -74,6 +90,22 @@ const TEXT = {
     show_printer_queue: "Queue per printer",
     queue_limit: "Max. jobs per list",
     up_next: "Up next",
+    timeline: "Schedule",
+    all_done: "All done",
+    all_free: "All printers free",
+    now: "Now",
+    free: "free",
+    approx: "approx.",
+    filament_missing: "not loaded",
+    filament_short: "not enough filament",
+    printing_n: "printing",
+    waiting_n: "waiting",
+    idle_n: "ready",
+    layout: "Layout",
+    layout_card: "Card",
+    layout_wall: "Wall tablet",
+    show_timeline: "Schedule",
+    show_filament_check: "Filament check",
     collapse_queue: "Lists collapsed by default",
     other_jobs: "Other jobs",
   },
@@ -101,6 +133,9 @@ const DEFAULTS = {
   show_queue: true,
   show_printer_queue: true,
   collapse_queue: false,
+  show_timeline: true,
+  show_filament_check: false,
+  layout: "card",
   queue_limit: 5,
 };
 
@@ -145,6 +180,17 @@ function formatMinutes(min) {
   return h ? `${h} h ${String(m).padStart(2, "0")} min` : `${m} min`;
 }
 
+// Spool colours of a job ("#RRGGBB" or "RRGGBBAA").
+function colorDots(colors) {
+  return (colors || [])
+    .slice(0, 6)
+    .map((c) => {
+      const hex = c.startsWith("#") ? c.slice(0, 7) : `#${c.slice(0, 6)}`;
+      return /^#[0-9a-fA-F]{6}$/.test(hex) ? `<span class="cdot" style="background:${hex}"></span>` : "";
+    })
+    .join("");
+}
+
 class BambuddyCard extends HTMLElement {
   static getStubConfig() {
     return {};
@@ -156,13 +202,26 @@ class BambuddyCard extends HTMLElement {
       schema: [
         { name: "title", selector: { text: {} } },
         {
+          name: "layout",
+          default: "card",
+          selector: {
+            select: {
+              mode: "box",
+              options: [
+                { value: "card", label: t.layout_card },
+                { value: "wall", label: t.layout_wall },
+              ],
+            },
+          },
+        },
+        {
           name: "printers",
           selector: { device: { multiple: true, filter: { integration: "bambuddy", manufacturer: "Bambu Lab" } } },
         },
         {
           type: "grid",
           name: "",
-          schema: ["show_temperatures", "show_ams", "show_controls", "show_camera", "show_printer_queue", "show_queue", "collapse_queue"].map((name) => ({
+          schema: ["show_temperatures", "show_ams", "show_controls", "show_camera", "show_timeline", "show_filament_check", "show_printer_queue", "show_queue", "collapse_queue"].map((name) => ({
             name,
             default: DEFAULTS[name],
             selector: { boolean: {} },
@@ -200,6 +259,8 @@ class BambuddyCard extends HTMLElement {
       this.shadowRoot.addEventListener("click", (ev) => this._onClick(ev));
     }
     if (this._hass) this._update();
+    // The wall layout shows a clock and the timeline moves with time.
+    if (!this._clock) this._clock = setInterval(() => this._hass && this._render(), 60000);
   }
 
   // ---- data -------------------------------------------------------------
@@ -247,6 +308,22 @@ class BambuddyCard extends HTMLElement {
     return id ? this._hass.states[id] : undefined;
   }
 
+  _time(value, alwaysDay = false) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (!value || isNaN(date)) return "";
+    const sameDay = date.toDateString() === new Date().toDateString();
+    return date.toLocaleString(this._hass.locale?.language || undefined, {
+      ...(sameDay && !alwaysDay ? {} : { weekday: "short" }),
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  disconnectedCallback() {
+    clearInterval(this._clock);
+    this._clock = null;
+  }
+
   _fmt(stateObj) {
     if (!stateObj) return "";
     return this._hass.formatEntityState ? this._hass.formatEntityState(stateObj) : stateObj.state;
@@ -256,12 +333,18 @@ class BambuddyCard extends HTMLElement {
 
   _render() {
     const t = TEXT[lang()];
+    if (!this._printers) return;
+    if (this._config.layout === "wall") {
+      this.shadowRoot.innerHTML = `<style>${STYLE}${WALL_STYLE}</style><ha-card class="wall">${this._renderWall(t)}</ha-card>`;
+      return;
+    }
+    const timeline = this._config.show_timeline ? this._renderTimeline(t) : "";
     const body = this._printers.length
       ? `<div class="printers${this._printers.length === 1 ? " single" : ""}">${this._printers.map((p) => this._renderPrinter(p, t)).join("")}</div>`
       : `<div class="empty pad">${esc(t.no_printers)}</div>`;
     const queue = this._config.show_queue && this._hub ? this._renderQueue(t) : "";
     const title = this._config.title ? `<h1 class="card-title">${esc(this._config.title)}</h1>` : "";
-    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>${title}${body}${queue}</ha-card>`;
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>${title}${body}${timeline}${queue}</ha-card>`;
   }
 
   _renderPrinter(p, t) {
@@ -443,11 +526,18 @@ class BambuddyCard extends HTMLElement {
       showPrinter ? job.printer || t.any : null,
       job.print_time_minutes ? formatMinutes(job.print_time_minutes) : null,
       job.filament_type,
+      cls !== "running" && job.estimated_start ? `${t.approx} ${this._time(job.estimated_start)}` : null,
     ].filter(Boolean);
+    const warn = [];
+    if (this._config.show_filament_check) {
+      if (job.filament_ok === false) warn.push(`${job.filament_missing.join(", ")} ${t.filament_missing}`);
+      if (job.filament_short) warn.push(t.filament_short);
+    }
     return `<li class="${cls}">
       <span class="marker">${marker}</span>
-      <span class="job-name">${esc(job.name || "?")}</span>
+      <span class="job-name">${esc(job.name || "?")}${colorDots(job.filament_colors)}</span>
       ${details.length ? `<span class="job-details">${esc(details.join(" · "))}</span>` : ""}
+      ${warn.length ? `<span class="job-warn"><ha-icon icon="mdi:alert"></ha-icon>${esc(warn.join(" · "))}</span>` : ""}
       ${job.waiting_reason ? `<span class="job-wait">${esc(job.waiting_reason)}</span>` : ""}
     </li>`;
   }
@@ -528,6 +618,134 @@ class BambuddyCard extends HTMLElement {
       </div>
       ${collapsed ? "" : list}
     </section>`;
+  }
+
+  _schedules() {
+    return this._printers.map((p) => ({
+      p,
+      entries: this._state(p, "sensor.free_at")?.attributes?.schedule || [],
+      color: STATE_COLORS[this._state(p, "sensor.printer_state")?.state] || "var(--primary-color)",
+    }));
+  }
+
+  _renderTimeline(t, collapsible = true) {
+    const rows = this._schedules();
+    const now = Date.now();
+    const ends = rows.flatMap((r) => r.entries.map((e) => Date.parse(e.end || e.start))).filter((v) => !isNaN(v));
+    const farmDone = this._state(this._hub, "sensor.farm_done_at")?.state;
+    const doneText =
+      farmDone && !["unknown", "unavailable"].includes(farmDone) ? `${t.all_done}: ${this._time(farmDone)}` : t.all_free;
+    const key = "timeline";
+    const collapsed = collapsible && this._isCollapsed(key);
+    const head = `<div class="head" ${collapsible ? `data-collapse="${key}" role="button"` : ""}>
+        <ha-icon icon="mdi:chart-timeline"></ha-icon><span class="name">${esc(t.timeline)}</span>
+        <span class="done" data-more="${esc(this._hub?.one["sensor.farm_done_at"] || "")}">${esc(doneText)}</span>
+        ${collapsible ? this._chevron(key) : ""}</div>`;
+    if (!ends.length || collapsed) return `<section class="timeline${collapsed ? " collapsed" : ""}">${head}</section>`;
+
+    const hour = 3600e3;
+    const span = Math.min(48 * hour, Math.max(2 * hour, Math.max(...ends) - now));
+    const step = [1, 2, 3, 4, 6, 12, 24].find((h) => span / (h * hour) <= 6) * hour;
+    const pct = (ms) => Math.max(0, Math.min(100, ((ms - now) / span) * 100));
+    const ticks = [];
+    for (let tick = Math.ceil(now / step) * step; tick < now + span; tick += step) {
+      ticks.push(`<span class="tick" style="left:${pct(tick)}%">${esc(this._time(new Date(tick)))}</span>`);
+    }
+    const body = rows
+      .map(({ p, entries, color }) => {
+        const segs = entries
+          .map((e, i) => {
+            const start = Date.parse(e.start);
+            if (isNaN(start)) return "";
+            const end = e.end ? Date.parse(e.end) : now + span;
+            const left = pct(start);
+            const width = Math.max(0.8, pct(end) - left);
+            const cls = ["seg", e.running ? "running" : i % 2 ? "alt" : "", e.end ? "" : "open", e.predicted ? "predicted" : ""].join(" ");
+            const title = `${e.name || "?"} · ${this._time(e.start)}${e.end ? `–${this._time(e.end)}` : ""}`;
+            return `<span class="${cls}" style="left:${left}%;width:${width}%;${e.running ? `--seg:${color}` : ""}" title="${esc(title)}">${esc(e.name || "")}</span>`;
+          })
+          .join("");
+        return `<div class="tl-row"><span class="tl-name" title="${esc(p.name)}">${esc(p.name)}</span>
+          <div class="tl-track">${segs || `<span class="tl-free">${esc(t.free)}</span>`}</div></div>`;
+      })
+      .join("");
+    return `<section class="timeline">${head}
+      <div class="tl">${body}<div class="tl-row axis"><span class="tl-name"></span><div class="tl-track">${ticks.join("")}</div></div></div>
+    </section>`;
+  }
+
+  _ring(progress, color, inner) {
+    const r = 54;
+    const c = 2 * Math.PI * r;
+    const p = Math.max(0, Math.min(100, progress || 0));
+    return `<div class="ring"><svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="${r}" class="ring-bg"/>
+        ${p > 0 ? `<circle cx="60" cy="60" r="${r}" class="ring-fg" style="stroke:${color}"
+          stroke-dasharray="${(c * p) / 100} ${c}" transform="rotate(-90 60 60)"/>` : ""}
+      </svg><div class="ring-inner">${inner}</div></div>`;
+  }
+
+  _renderWallTile(p, t) {
+    const stateObj = this._state(p, "sensor.printer_state");
+    const state = stateObj?.state || "unavailable";
+    const printing = PRINTING_STATES.has(state);
+    const color = STATE_COLORS[state] || "var(--secondary-text-color)";
+    const progress = num(this._state(p, "sensor.progress"));
+    const remaining = num(this._state(p, "sensor.remaining_time"));
+    const end = this._state(p, "sensor.end_time")?.state;
+    const job = this._state(p, "sensor.current_print")?.state;
+    const cover = this._state(p, "image.cover")?.attributes?.entity_picture;
+    const inner = printing
+      ? `${cover ? `<img src="${esc(cover)}" alt="">` : ""}<span class="pct">${Math.round(progress ?? 0)}<small>%</small></span>`
+      : `<ha-icon icon="${state === "offline" ? "mdi:printer-3d-off" : "mdi:printer-3d"}"></ha-icon>`;
+    const queue = this._state(p, "sensor.printer_queue")?.attributes?.jobs || [];
+    const next = queue[0];
+    const plate = this._state(p, "binary_sensor.awaiting_plate_clear")?.state === "on";
+    const clearBtn = p.one["button.clear_plate"];
+    const errors = num(this._state(p, "sensor.hms_errors"));
+    const warn =
+      this._config.show_filament_check && next && (next.filament_ok === false || next.filament_short)
+        ? `<div class="w-banner warn"><ha-icon icon="mdi:alert"></ha-icon>${esc(
+            next.filament_ok === false ? `${next.filament_missing.join(", ")} ${t.filament_missing}` : t.filament_short,
+          )}</div>`
+        : "";
+    return `<div class="w-tile" style="--accent:${color}" data-more="${esc(p.one["sensor.printer_state"])}">
+      <div class="w-head"><span class="w-name">${esc(p.name)}</span><span class="chip" style="--chip:${color}">${esc(this._fmt(stateObj))}</span></div>
+      ${this._ring(printing ? progress : 0, color, inner)}
+      <div class="w-job">${printing && job && !["unknown", "unavailable"].includes(job) ? esc(job) : "&nbsp;"}</div>
+      <div class="w-time">${printing && remaining != null ? `${esc(formatMinutes(remaining))} · ${esc(this._time(end))}` : "&nbsp;"}</div>
+      ${plate ? `<div class="w-banner plate"><ha-icon icon="mdi:broom"></ha-icon><span>${esc(t.plate)}</span>${
+        clearBtn && this._hass.states[clearBtn]?.state !== "unavailable" ? `<button data-press="${esc(clearBtn)}">${esc(t.plate_done)}</button>` : ""
+      }</div>` : ""}
+      ${errors ? `<div class="w-banner error"><ha-icon icon="mdi:alert"></ha-icon>${errors} ${esc(errors === 1 ? t.error_one : t.errors)}</div>` : ""}
+      ${warn}
+      ${next ? `<div class="w-next"><span>${esc(t.up_next)}</span> ${esc(next.name || "?")}${colorDots(next.filament_colors)}${
+        next.estimated_start ? ` <span class="w-at">${esc(t.approx)} ${esc(this._time(next.estimated_start))}</span>` : ""
+      }${queue.length > 1 ? ` <span class="w-more">+${queue.length - 1}</span>` : ""}</div>` : ""}
+    </div>`;
+  }
+
+  _renderWall(t) {
+    const states = this._printers.map((p) => this._state(p, "sensor.printer_state")?.state);
+    const printing = states.filter((s) => PRINTING_STATES.has(s)).length;
+    const idle = states.filter((s) => s === "idle" || s === "finish").length;
+    const waiting = num(this._state(this._hub, "sensor.queue_pending")) ?? 0;
+    const farmDone = this._state(this._hub, "sensor.farm_done_at")?.state;
+    const clock = new Date().toLocaleTimeString(this._hass.locale?.language || undefined, { hour: "2-digit", minute: "2-digit" });
+    const chips = [
+      `<span class="w-chip"><ha-icon icon="mdi:printer-3d-nozzle"></ha-icon>${printing} ${esc(t.printing_n)}</span>`,
+      `<span class="w-chip"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${idle} ${esc(t.idle_n)}</span>`,
+      `<span class="w-chip"><ha-icon icon="mdi:format-list-numbered"></ha-icon>${waiting} ${esc(t.waiting_n)}</span>`,
+      farmDone && !["unknown", "unavailable"].includes(farmDone)
+        ? `<span class="w-chip"><ha-icon icon="mdi:flag-checkered"></ha-icon>${esc(t.all_done)} ${esc(this._time(farmDone))}</span>`
+        : "",
+    ].join("");
+    const tiles = this._printers.map((p) => this._renderWallTile(p, t)).join("");
+    const timeline = this._config.show_timeline ? this._renderTimeline(t, false) : "";
+    const queue = this._config.show_queue && this._hub ? this._renderQueue(t) : "";
+    return `<div class="w-top"><span class="w-title">${esc(this._config.title || "Bambuddy")}</span>
+        <span class="w-chips">${chips}</span><span class="w-clock">${esc(clock)}</span></div>
+      <div class="w-grid">${tiles || `<div class="empty pad">${esc(t.no_printers)}</div>`}</div>${timeline}${queue}`;
   }
 
   // ---- interaction ------------------------------------------------------
@@ -646,6 +864,64 @@ const STYLE = `
   .pqueue .count { background: var(--card-background-color); }
   .more { margin-top: 6px; font-size: 0.85em; color: var(--primary-color); }
   .empty { color: var(--secondary-text-color); font-size: 0.9em; padding: 8px 0 0; }
+  .cdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 5px; vertical-align: 0;
+          border: 1px solid var(--divider-color); }
+  .job-warn { font-size: 0.82em; color: var(--warning-color, #ffa000); }
+  .job-warn ha-icon { --mdc-icon-size: 14px; margin-right: 3px; vertical-align: -2px; }
+  .timeline .head .done { font-size: 0.85em; color: var(--secondary-text-color); white-space: nowrap; }
+  .tl { margin-top: 10px; }
+  .tl-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .tl-name { width: 92px; flex: none; font-size: 0.82em; color: var(--secondary-text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tl-track { position: relative; flex: 1; height: 22px; border-radius: 6px; background: var(--secondary-background-color); overflow: hidden; }
+  .axis .tl-track { background: none; height: 16px; overflow: visible; }
+  .tick { position: absolute; top: 0; transform: translateX(-50%); font-size: 0.72em; color: var(--secondary-text-color); white-space: nowrap; }
+  .seg { position: absolute; top: 2px; bottom: 2px; border-radius: 4px; padding: 0 6px; box-sizing: border-box; font-size: 0.72em; line-height: 18px;
+         color: #fff; background: var(--primary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seg.alt { background: color-mix(in srgb, var(--primary-color) 70%, #000); }
+  .seg.running { background: var(--seg); }
+  .seg.predicted { background: repeating-linear-gradient(135deg, var(--primary-color) 0 6px, color-mix(in srgb, var(--primary-color) 75%, #fff) 6px 12px); }
+  .seg.open { -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent); mask-image: linear-gradient(90deg, #000 70%, transparent); }
+  .tl-free { position: absolute; left: 8px; line-height: 22px; font-size: 0.75em; color: var(--secondary-text-color); }
+`;
+
+const WALL_STYLE = `
+  ha-card.wall { padding: 16px; font-size: 1.05em; }
+  .w-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .w-title { font-size: 1.5em; font-weight: 500; }
+  .w-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .w-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 16px;
+            background: var(--secondary-background-color); font-size: 0.9em; }
+  .w-chip ha-icon { --mdc-icon-size: 18px; color: var(--secondary-text-color); }
+  .w-clock { font-size: 2em; font-weight: 300; font-variant-numeric: tabular-nums; }
+  .w-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .w-tile { border-radius: 16px; padding: 14px; border: 1px solid var(--divider-color); border-top: 6px solid var(--accent);
+            background: color-mix(in srgb, var(--accent) 5%, var(--card-background-color, transparent)); text-align: center; cursor: pointer; }
+  .w-head { display: flex; align-items: center; gap: 8px; text-align: left; }
+  .w-name { flex: 1; font-size: 1.25em; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ring { position: relative; width: min(180px, 70%); aspect-ratio: 1; margin: 12px auto 8px; }
+  .ring svg { width: 100%; height: 100%; }
+  .ring-bg { fill: none; stroke: var(--secondary-background-color); stroke-width: 10; }
+  .ring-fg { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dasharray 0.8s ease; }
+  .ring-inner { position: absolute; inset: 18%; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .ring-inner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0.35; }
+  .ring-inner .pct { position: relative; font-size: 2.6em; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .ring-inner .pct small { font-size: 0.45em; margin-left: 2px; }
+  .ring-inner ha-icon { --mdc-icon-size: 56px; color: var(--secondary-text-color); }
+  .w-job { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .w-time { color: var(--secondary-text-color); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .w-banner { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding: 8px 10px; border-radius: 10px; font-size: 0.9em; text-align: left; }
+  .w-banner span { flex: 1; }
+  .w-banner ha-icon { --mdc-icon-size: 18px; flex: none; }
+  .w-banner.plate { background: color-mix(in srgb, var(--warning-color, #ffa000) 18%, transparent); }
+  .w-banner.warn { background: color-mix(in srgb, var(--warning-color, #ffa000) 12%, transparent); color: var(--warning-color, #ffa000); }
+  .w-banner.error { background: color-mix(in srgb, var(--error-color, #db4437) 15%, transparent); color: var(--error-color, #db4437); }
+  .w-banner button { font-size: 1em; padding: 8px 16px; }
+  .w-next { margin-top: 10px; font-size: 0.9em; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .w-next > span:first-child, .w-at, .w-more { color: var(--secondary-text-color); }
+  .wall section { padding: 14px 4px 0; border-top: none; }
+  .wall .tl-name { width: 110px; font-size: 0.9em; }
+  .wall .tl-track { height: 28px; }
+  .wall .seg { line-height: 24px; font-size: 0.8em; }
 `;
 
 if (!customElements.get("bambuddy-card")) {

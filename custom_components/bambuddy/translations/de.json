@@ -37,7 +37,11 @@
       "init": {
         "title": "Bambuddy-Optionen",
         "data": {
-          "scan_interval": "Abfrageintervall (Sekunden)"
+          "scan_interval": "Abfrageintervall (Sekunden)",
+          "enable_costs": "Kosten-Sensoren anlegen (Filament, Energie)"
+        },
+        "data_description": {
+          "enable_costs": "Filament- und Energiekosten aus Bambuddy. Energie braucht in Bambuddy eingerichtete Steckdosen."
         }
       }
     }
@@ -156,6 +160,51 @@
           "empty": "Leer",
           "unknown": "Unbekannt"
         }
+      },
+      "free_at": {
+        "name": "Frei ab"
+      },
+      "farm_done_at": {
+        "name": "Druckfarm fertig um"
+      },
+      "prints_total": {
+        "name": "Drucke gesamt"
+      },
+      "prints_month": {
+        "name": "Drucke diesen Monat"
+      },
+      "prints_today": {
+        "name": "Drucke heute"
+      },
+      "success_rate": {
+        "name": "Erfolgsquote"
+      },
+      "print_time_total": {
+        "name": "Druckzeit gesamt"
+      },
+      "filament_total": {
+        "name": "Filament gesamt"
+      },
+      "filament_month": {
+        "name": "Filament diesen Monat"
+      },
+      "filament_cost_total": {
+        "name": "Filamentkosten gesamt"
+      },
+      "filament_cost_month": {
+        "name": "Filamentkosten diesen Monat"
+      },
+      "energy_total": {
+        "name": "Energie gesamt"
+      },
+      "energy_month": {
+        "name": "Energie diesen Monat"
+      },
+      "energy_cost_total": {
+        "name": "Energiekosten gesamt"
+      },
+      "energy_cost_month": {
+        "name": "Energiekosten diesen Monat"
       }
     },
     "binary_sensor": {
@@ -179,6 +228,9 @@
       },
       "timelapse": {
         "name": "Zeitraffer"
+      },
+      "in_use": {
+        "name": "In Benutzung"
       }
     },
     "button": {
@@ -225,6 +277,22 @@
       "queue": {
         "name": "Druck-Warteschlange"
       }
+    },
+    "event": {
+      "print_event": {
+        "name": "Druckereignis",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "print_started": "Druck gestartet",
+              "print_finished": "Druck fertig",
+              "print_failed": "Druck fehlgeschlagen",
+              "plate_clear_required": "Druckplatte räumen",
+              "error": "Fehler"
+            }
+          }
+        }
+      }
     }
   },
   "exceptions": {
@@ -236,6 +304,99 @@
     },
     "cannot_connect": {
       "message": "Bambuddy ist nicht erreichbar: {detail}"
+    },
+    "printer_not_found": {
+      "message": "Dieses Gerät ist kein Bambuddy-Drucker."
+    },
+    "job_not_found": {
+      "message": "Auftrag {job_id} ist nicht in der Warteschlange."
+    },
+    "job_not_movable": {
+      "message": "Nur wartende Aufträge lassen sich verschieben oder löschen."
+    },
+    "file_not_found": {
+      "message": "Kein Druck oder keine Datei passend zu „{name}“ gefunden."
+    },
+    "file_ambiguous": {
+      "message": "Mehrere Dateien passen: {names}. Bitte genauer angeben oder die ID verwenden."
+    }
+  },
+  "services": {
+    "clear_plate": {
+      "name": "Druckplatte als geräumt melden",
+      "description": "Teilt Bambuddy mit, dass die Druckplatte frei ist, damit der nächste Auftrag starten kann.",
+      "fields": {
+        "device_id": {
+          "name": "Drucker",
+          "description": "Der Bambuddy-Drucker."
+        }
+      }
+    },
+    "move_job_to_front": {
+      "name": "Auftrag nach vorne",
+      "description": "Setzt einen wartenden Auftrag an die erste Stelle der Warteschlange.",
+      "fields": {
+        "job_id": {
+          "name": "Auftrags-ID",
+          "description": "Die ID aus dem Attribut jobs bzw. der To-do-Liste."
+        }
+      }
+    },
+    "cancel_job": {
+      "name": "Auftrag überspringen",
+      "description": "Bricht einen wartenden Auftrag ab und nimmt ihn aus der Warteschlange.",
+      "fields": {
+        "job_id": {
+          "name": "Auftrags-ID",
+          "description": "Die ID aus dem Attribut jobs bzw. der To-do-Liste."
+        }
+      }
+    },
+    "start_job": {
+      "name": "Auftrag starten",
+      "description": "Startet einen Auftrag, der auf manuellen Start wartet.",
+      "fields": {
+        "job_id": {
+          "name": "Auftrags-ID",
+          "description": "Die ID aus dem Attribut jobs bzw. der To-do-Liste."
+        }
+      }
+    },
+    "print_again": {
+      "name": "Nochmal drucken",
+      "description": "Stellt einen früheren Druck aus dem Bambuddy-Archiv erneut in die Warteschlange.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name des Drucks; der neueste passende wird genommen."
+        },
+        "archive_id": {
+          "name": "Archiv-ID",
+          "description": "Statt des Namens."
+        },
+        "device_id": {
+          "name": "Drucker",
+          "description": "Optional; sonst der Drucker, auf dem es zuletzt gedruckt wurde."
+        }
+      }
+    },
+    "print_file": {
+      "name": "Datei drucken",
+      "description": "Stellt eine Datei aus der Bambuddy-Bibliothek in die Warteschlange.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Dateiname oder ein Teil davon."
+        },
+        "file_id": {
+          "name": "Datei-ID",
+          "description": "Statt des Namens."
+        },
+        "device_id": {
+          "name": "Drucker",
+          "description": "Auf welchem Drucker gedruckt wird."
+        }
+      }
     }
   }
 }

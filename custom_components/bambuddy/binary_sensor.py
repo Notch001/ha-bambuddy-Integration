@@ -18,6 +18,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
 from .entity import BambuddyPrinterEntity, add_entities_when_seen
+from .planner import in_use
 
 PARALLEL_UPDATES = 0
 
@@ -25,9 +26,19 @@ PARALLEL_UPDATES = 0
 @dataclass(frozen=True, kw_only=True)
 class BambuddyBinarySensorDescription(BinarySensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], bool | None]
+    # Reads the whole snapshot instead of the printer status; still works
+    # while the printer is switched off (no status).
+    data_fn: Callable[[BambuddyBinarySensor], bool] | None = None
 
 
 BINARY_SENSORS: tuple[BambuddyBinarySensorDescription, ...] = (
+    BambuddyBinarySensorDescription(
+        key="in_use",
+        translation_key="in_use",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        value_fn=lambda s: False,
+        data_fn=lambda e: in_use(e.printer_id, e.status, e.coordinator.data.plan),
+    ),
     BambuddyBinarySensorDescription(
         key="online",
         translation_key="online",
@@ -107,13 +118,15 @@ class BambuddyBinarySensor(BambuddyPrinterEntity, BinarySensorEntity):
 
     @property
     def available(self) -> bool:
-        # "Online" stays available so it can say "off" when Bambuddy has no status.
-        if self.entity_description.key == "online":
+        # These stay available so they can say "off" when Bambuddy has no status.
+        if self.entity_description.key == "online" or self.entity_description.data_fn:
             return super().available
         return super().available and self.status is not None
 
     @property
     def is_on(self) -> bool | None:
+        if self.entity_description.data_fn:
+            return self.entity_description.data_fn(self)
         status = self.status
         if status is None:
             return False if self.entity_description.key == "online" else None

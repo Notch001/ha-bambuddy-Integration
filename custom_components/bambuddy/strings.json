@@ -37,7 +37,11 @@
       "init": {
         "title": "Bambuddy options",
         "data": {
-          "scan_interval": "Polling interval (seconds)"
+          "scan_interval": "Polling interval (seconds)",
+          "enable_costs": "Create cost sensors (filament, energy)"
+        },
+        "data_description": {
+          "enable_costs": "Filament and energy costs from Bambuddy. Energy needs smart plugs set up in Bambuddy."
         }
       }
     }
@@ -156,6 +160,51 @@
           "empty": "Empty",
           "unknown": "Unknown"
         }
+      },
+      "free_at": {
+        "name": "Free from"
+      },
+      "farm_done_at": {
+        "name": "Print farm done at"
+      },
+      "prints_total": {
+        "name": "Prints total"
+      },
+      "prints_month": {
+        "name": "Prints this month"
+      },
+      "prints_today": {
+        "name": "Prints today"
+      },
+      "success_rate": {
+        "name": "Success rate"
+      },
+      "print_time_total": {
+        "name": "Print time total"
+      },
+      "filament_total": {
+        "name": "Filament total"
+      },
+      "filament_month": {
+        "name": "Filament this month"
+      },
+      "filament_cost_total": {
+        "name": "Filament cost total"
+      },
+      "filament_cost_month": {
+        "name": "Filament cost this month"
+      },
+      "energy_total": {
+        "name": "Energy total"
+      },
+      "energy_month": {
+        "name": "Energy this month"
+      },
+      "energy_cost_total": {
+        "name": "Energy cost total"
+      },
+      "energy_cost_month": {
+        "name": "Energy cost this month"
       }
     },
     "binary_sensor": {
@@ -179,6 +228,9 @@
       },
       "timelapse": {
         "name": "Timelapse"
+      },
+      "in_use": {
+        "name": "In use"
       }
     },
     "button": {
@@ -225,6 +277,22 @@
       "queue": {
         "name": "Print queue"
       }
+    },
+    "event": {
+      "print_event": {
+        "name": "Print event",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "print_started": "Print started",
+              "print_finished": "Print finished",
+              "print_failed": "Print failed",
+              "plate_clear_required": "Clear build plate",
+              "error": "Error"
+            }
+          }
+        }
+      }
     }
   },
   "exceptions": {
@@ -236,6 +304,99 @@
     },
     "cannot_connect": {
       "message": "Cannot reach Bambuddy: {detail}"
+    },
+    "printer_not_found": {
+      "message": "This device is not a Bambuddy printer."
+    },
+    "job_not_found": {
+      "message": "Job {job_id} is not in the queue."
+    },
+    "job_not_movable": {
+      "message": "Only waiting jobs can be moved or deleted."
+    },
+    "file_not_found": {
+      "message": "No print or file matching \"{name}\" found."
+    },
+    "file_ambiguous": {
+      "message": "Several files match: {names}. Please be more specific or use the ID."
+    }
+  },
+  "services": {
+    "clear_plate": {
+      "name": "Mark build plate cleared",
+      "description": "Tells Bambuddy the build plate is free so the next job can start.",
+      "fields": {
+        "device_id": {
+          "name": "Printer",
+          "description": "The Bambuddy printer."
+        }
+      }
+    },
+    "move_job_to_front": {
+      "name": "Move job to front",
+      "description": "Moves a waiting job to the first place in the queue.",
+      "fields": {
+        "job_id": {
+          "name": "Job ID",
+          "description": "The ID from the jobs attribute or the to-do list."
+        }
+      }
+    },
+    "cancel_job": {
+      "name": "Skip job",
+      "description": "Cancels a waiting job and removes it from the queue.",
+      "fields": {
+        "job_id": {
+          "name": "Job ID",
+          "description": "The ID from the jobs attribute or the to-do list."
+        }
+      }
+    },
+    "start_job": {
+      "name": "Start job",
+      "description": "Starts a job that waits for a manual start.",
+      "fields": {
+        "job_id": {
+          "name": "Job ID",
+          "description": "The ID from the jobs attribute or the to-do list."
+        }
+      }
+    },
+    "print_again": {
+      "name": "Print again",
+      "description": "Puts an earlier print from Bambuddy's archive back into the queue.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name of the print; the newest match is used."
+        },
+        "archive_id": {
+          "name": "Archive ID",
+          "description": "Instead of the name."
+        },
+        "device_id": {
+          "name": "Printer",
+          "description": "Optional; otherwise the printer it was last printed on."
+        }
+      }
+    },
+    "print_file": {
+      "name": "Print file",
+      "description": "Puts a file from Bambuddy's library into the queue.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "File name or part of it."
+        },
+        "file_id": {
+          "name": "File ID",
+          "description": "Instead of the name."
+        },
+        "device_id": {
+          "name": "Printer",
+          "description": "Which printer to print on."
+        }
+      }
     }
   }
 }

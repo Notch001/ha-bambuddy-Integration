@@ -18,6 +18,8 @@ REQUEST_TIMEOUT: Final = timedelta(seconds=15)
 CAMERA_TIMEOUT: Final = timedelta(seconds=30)
 CAMERA_TOKEN_LIFETIME: Final = timedelta(minutes=50)
 COLOR_MAP_REFRESH: Final = timedelta(hours=1)
+STATS_INTERVAL: Final = timedelta(minutes=10)
+CONF_ENABLE_COSTS: Final = "enable_costs"
 
 # Bambu print speed levels as Bambuddy reports and accepts them.
 SPEED_LEVELS: Final = {1: "silent", 2: "standard", 3: "sport", 4: "ludicrous"}

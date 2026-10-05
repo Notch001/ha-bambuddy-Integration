@@ -80,6 +80,15 @@ QUEUE_PRINTING: list[dict[str, Any]] = [
 ]
 
 
+STATS: dict[str, Any] = {
+    "total_prints": 120, "successful_prints": 100, "failed_prints": 20, "cancelled_prints": 3,
+    "total_print_time_hours": 480.5, "total_filament_grams": 9876.5, "total_cost": 210.4,
+    "prints_by_filament_type": {"PLA": 90, "PETG": 30}, "prints_by_printer": {"1": 80, "2": 40},
+    "printer_names": {"1": "X1C Werkstatt", "2": "A1 Mini"},
+    "total_energy_kwh": 55.2, "total_energy_cost": 17.1,
+}
+
+
 def mock_bambuddy(aioclient_mock, *, status: dict[int, dict] | None = None, auth_status: int | None = None) -> None:
     """Register the fake Bambuddy endpoints."""
     aioclient_mock.clear_requests()
@@ -93,6 +102,8 @@ def mock_bambuddy(aioclient_mock, *, status: dict[int, dict] | None = None, auth
         aioclient_mock.get(f"{API}/printers/{printer_id}/status", json=copy.deepcopy(data))
     aioclient_mock.get(f"{API}/queue/", params={"status": "pending"}, json=copy.deepcopy(QUEUE_PENDING))
     aioclient_mock.get(f"{API}/queue/", params={"status": "printing"}, json=copy.deepcopy(QUEUE_PRINTING))
+    aioclient_mock.get(f"{API}/archives/stats", json=copy.deepcopy(STATS))
+    aioclient_mock.get(f"{API}/settings/ui-flags", json={"currency": "EUR"})
     aioclient_mock.get(f"{API}/inventory/colors/map", json={
         "colors": {"ff0000": "Red", "00ae42": "Bambu Green", "ffffff": "Jade White"},
         "by_material": {"pla matte|ffffff": "Ivory White"},

@@ -1,0 +1,82 @@
+blueprint:
+  name: "Bambuddy: switch printer power automatically"
+  description: >-
+    Switches a printer's smart plug off once it is no longer in use (nothing
+    printing, no job waiting for it, nozzle and bed cooled down), and back on
+    as soon as a job is waiting for it. Uses the printer's "In use" sensor.
+    Create one automation per printer.
+
+
+    Schaltet die Steckdose eines Druckers aus, sobald er nicht mehr gebraucht
+    wird (kein Druck, kein wartender Auftrag, abgekühlt), und wieder ein, sobald
+    ein Auftrag auf ihn wartet. Pro Drucker eine Automation anlegen.
+  domain: automation
+  author: Notch001
+  homeassistant:
+    min_version: "2025.3.0"
+  source_url: https://github.com/Notch001/ha-bambuddy-integration/blob/main/blueprints/automation/bambuddy/auto_power.yaml
+  input:
+    in_use:
+      name: '"In use" sensor / Sensor "In Benutzung"'
+      selector:
+        entity:
+          filter:
+            - integration: bambuddy
+              domain: binary_sensor
+    plug:
+      name: Smart plug / Steckdose
+      selector:
+        entity:
+          filter:
+            - domain: switch
+    off_delay:
+      name: Switch off after / Ausschalten nach
+      description: How long the printer has to be unused before it is switched off.
+      default:
+        minutes: 15
+      selector:
+        duration:
+    power_on:
+      name: Switch on for new jobs / Bei neuen Aufträgen einschalten
+      default: true
+      selector:
+        boolean:
+
+mode: restart
+
+triggers:
+  - trigger: state
+    entity_id: !input in_use
+    from: "on"
+    to: "off"
+    for: !input off_delay
+    id: unused
+  - trigger: state
+    entity_id: !input in_use
+    to: "on"
+    id: needed
+
+variables:
+  power_on: !input power_on
+  plug: !input plug
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: unused
+          - condition: template
+            value_template: "{{ is_state(plug, 'on') }}"
+        sequence:
+          - action: switch.turn_off
+            target:
+              entity_id: !input plug
+      - conditions:
+          - condition: trigger
+            id: needed
+          - condition: template
+            value_template: "{{ power_on and is_state(plug, 'off') }}"
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input plug

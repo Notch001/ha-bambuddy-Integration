@@ -12,10 +12,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import BambuddyApiClient, BambuddyAuthError, BambuddyError
+from .planner import Plan, build_plan
 from .const import (
     COLOR_MAP_REFRESH,
+    STATS_INTERVAL,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -39,6 +42,8 @@ class BambuddyData:
     queue: list[dict[str, Any]] = field(default_factory=list)
     # Bambuddy's colour catalogue, see BambuddyApiClient.get_color_map
     colors: dict[str, Any] = field(default_factory=dict)
+    # Estimated start/end of queued jobs, see planner.build_plan
+    plan: Plan = field(default_factory=Plan)
 
 
 class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
@@ -61,6 +66,8 @@ class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
             update_interval=timedelta(seconds=interval),
         )
         self.client = client
+        # Set in async_setup_entry; the hub's statistics sensors read it.
+        self.stats: BambuddyStatsCoordinator | None = None
         self._colors: dict[str, Any] = {}
         self._colors_fetched = 0.0
 
@@ -98,11 +105,13 @@ class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
             key=lambda item: (item.get("position", 0), item.get("id", 0)),
         )
 
+        by_id = {p["id"]: p for p in printers}
         return BambuddyData(
-            printers={p["id"]: p for p in printers},
+            printers=by_id,
             status=status,
             queue=queue,
             colors=await self._async_colors(),
+            plan=build_plan(by_id, status, queue),
         )
 
     async def _async_colors(self) -> dict[str, Any]:
@@ -119,3 +128,49 @@ class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
         except BambuddyError as err:
             _LOGGER.debug("Could not fetch Bambuddy colour names: %s", err)
         return self._colors
+
+
+@dataclass
+class BambuddyStats:
+    """Bambuddy's print statistics for a few periods."""
+
+    total: dict[str, Any] = field(default_factory=dict)
+    month: dict[str, Any] = field(default_factory=dict)
+    today: dict[str, Any] = field(default_factory=dict)
+    currency: str | None = None
+
+
+class BambuddyStatsCoordinator(DataUpdateCoordinator[BambuddyStats]):
+    """Polls /archives/stats; separate because it is slower and changes rarely."""
+
+    config_entry: BambuddyConfigEntry
+
+    def __init__(
+        self, hass: HomeAssistant, entry: BambuddyConfigEntry, client: BambuddyApiClient
+    ) -> None:
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=entry,
+            name=f"{DOMAIN}_stats",
+            update_interval=STATS_INTERVAL,
+        )
+        self.client = client
+        self._currency: str | None = None
+
+    async def _async_update_data(self) -> BambuddyStats:
+        today = dt_util.now().date()
+        try:
+            total, month, day = await asyncio.gather(
+                self.client.get_stats(),
+                self.client.get_stats(today.replace(day=1).isoformat()),
+                self.client.get_stats(today.isoformat()),
+            )
+        except BambuddyError as err:
+            raise UpdateFailed(str(err)) from err
+        if self._currency is None:
+            try:
+                self._currency = (await self.client.get_ui_flags()).get("currency")
+            except BambuddyError as err:
+                _LOGGER.debug("Could not read the currency from Bambuddy: %s", err)
+        return BambuddyStats(total=total, month=month, today=day, currency=self._currency)

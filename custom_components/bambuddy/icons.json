@@ -108,6 +108,51 @@
         "state": {
           "empty": "mdi:circle-outline"
         }
+      },
+      "free_at": {
+        "default": "mdi:clock-check-outline"
+      },
+      "farm_done_at": {
+        "default": "mdi:flag-checkered"
+      },
+      "prints_total": {
+        "default": "mdi:counter"
+      },
+      "prints_month": {
+        "default": "mdi:calendar-month"
+      },
+      "prints_today": {
+        "default": "mdi:calendar-today"
+      },
+      "success_rate": {
+        "default": "mdi:check-decagram"
+      },
+      "print_time_total": {
+        "default": "mdi:timer-outline"
+      },
+      "filament_total": {
+        "default": "mdi:weight-gram"
+      },
+      "filament_month": {
+        "default": "mdi:weight-gram"
+      },
+      "filament_cost_total": {
+        "default": "mdi:cash"
+      },
+      "filament_cost_month": {
+        "default": "mdi:cash"
+      },
+      "energy_total": {
+        "default": "mdi:lightning-bolt"
+      },
+      "energy_month": {
+        "default": "mdi:lightning-bolt"
+      },
+      "energy_cost_total": {
+        "default": "mdi:cash-plus"
+      },
+      "energy_cost_month": {
+        "default": "mdi:cash-plus"
       }
     },
     "binary_sensor": {
@@ -130,6 +175,12 @@
         "default": "mdi:video-off-outline",
         "state": {
           "on": "mdi:timelapse"
+        }
+      },
+      "in_use": {
+        "default": "mdi:power-plug-off-outline",
+        "state": {
+          "on": "mdi:power-plug"
         }
       }
     },
@@ -170,6 +221,31 @@
       "queue": {
         "default": "mdi:format-list-numbered"
       }
+    },
+    "event": {
+      "print_event": {
+        "default": "mdi:bell-ring-outline"
+      }
+    }
+  },
+  "services": {
+    "clear_plate": {
+      "service": "mdi:broom"
+    },
+    "move_job_to_front": {
+      "service": "mdi:arrow-collapse-up"
+    },
+    "cancel_job": {
+      "service": "mdi:skip-next"
+    },
+    "start_job": {
+      "service": "mdi:play"
+    },
+    "print_again": {
+      "service": "mdi:repeat"
+    },
+    "print_file": {
+      "service": "mdi:file-send"
     }
   }
 }

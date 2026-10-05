@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Iterable
-from typing import Any
+from typing import Any, NoReturn
 
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -14,7 +14,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import BambuddyAuthError, BambuddyError, BambuddyRequestError
 from .const import ACTIVE_PRINT_STATES, DOMAIN, MAX_JOBS_IN_ATTRIBUTES
-from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
+from .coordinator import BambuddyConfigEntry, BambuddyCoordinator, BambuddyData
+from .planner import filament_check
 
 
 def add_entities_when_seen(
@@ -44,6 +45,25 @@ def add_entities_when_seen(
     entry.async_on_unload(coordinator.async_add_listener(_add_new))
 
 
+def raise_for_action(err: BambuddyError) -> NoReturn:
+    """Turn a failed Bambuddy call into a message the user can act on."""
+    if isinstance(err, BambuddyAuthError):
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="no_control_permission"
+        ) from err
+    if isinstance(err, BambuddyRequestError):
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="action_rejected",
+            translation_placeholders={"detail": str(err)},
+        ) from err
+    raise HomeAssistantError(
+        translation_domain=DOMAIN,
+        translation_key="cannot_connect",
+        translation_placeholders={"detail": str(err)},
+    ) from err
+
+
 def is_printing(status: dict[str, Any] | None) -> bool:
     return bool(status) and status.get("state") in ACTIVE_PRINT_STATES
 
@@ -53,13 +73,21 @@ def job_name(item: dict[str, Any]) -> str | None:
     return item.get("archive_name") or item.get("library_file_name")
 
 
-def job_summary(item: dict[str, Any]) -> dict[str, Any]:
-    """The subset of a queue item that is useful in Home Assistant."""
+def _iso(value) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def job_summary(item: dict[str, Any], data: BambuddyData | None = None) -> dict[str, Any]:
+    """The subset of a queue item that is useful in Home Assistant.
+
+    With the coordinator snapshot it also carries the schedule estimate and
+    the filament check.
+    """
     seconds = item.get("print_time_seconds")
     printer = item.get("printer_name")
     if printer is None and item.get("target_model"):
         printer = f"Any {item['target_model']}"
-    return {
+    summary = {
         "id": item.get("id"),
         "name": job_name(item),
         "status": item.get("status"),
@@ -73,11 +101,33 @@ def job_summary(item: dict[str, Any]) -> dict[str, Any]:
         "filament_grams": item.get("filament_used_grams"),
         "manual_start": item.get("manual_start"),
         "waiting_reason": item.get("waiting_reason"),
+        "filament_colors": [
+            c.strip() for c in (item.get("filament_color") or "").split(",") if c.strip()
+        ],
+        "estimated_cost": item.get("estimated_cost"),
     }
+    if data is None:
+        return summary
+    job_plan = data.plan.jobs.get(item.get("id"))
+    planned_printer = job_plan.printer_id if job_plan else item.get("printer_id")
+    check = filament_check(item, planned_printer, data.status)
+    summary.update(
+        {
+            "estimated_start": _iso(job_plan.start) if job_plan else None,
+            "estimated_end": _iso(job_plan.end) if job_plan else None,
+            "planned_printer_id": planned_printer,
+            "filament_ok": check["ok"],
+            "filament_missing": check["missing"],
+            "filament_short": check["short"],
+        }
+    )
+    return summary
 
 
-def jobs_attribute(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [job_summary(item) for item in items[:MAX_JOBS_IN_ATTRIBUTES]]
+def jobs_attribute(
+    items: list[dict[str, Any]], data: BambuddyData | None = None
+) -> list[dict[str, Any]]:
+    return [job_summary(item, data) for item in items[:MAX_JOBS_IN_ATTRIBUTES]]
 
 
 def hub_device_info(coordinator: BambuddyCoordinator) -> DeviceInfo:
@@ -147,20 +197,6 @@ class BambuddyPrinterEntity(CoordinatorEntity[BambuddyCoordinator]):
         """Run a control call, translate errors, then refresh the data."""
         try:
             await action()
-        except BambuddyAuthError as err:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="no_control_permission"
-            ) from err
-        except BambuddyRequestError as err:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="action_rejected",
-                translation_placeholders={"detail": str(err)},
-            ) from err
         except BambuddyError as err:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="cannot_connect",
-                translation_placeholders={"detail": str(err)},
-            ) from err
+            raise_for_action(err)
         await self.coordinator.async_request_refresh()

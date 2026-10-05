@@ -18,19 +18,29 @@ from homeassistant.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
+    UnitOfEnergy,
+    UnitOfMass,
     UnitOfTemperature,
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .colors import color_name, hex_color, spool_picture
-from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
+from .const import CONF_ENABLE_COSTS, MAX_JOBS_IN_ATTRIBUTES
+from .coordinator import (
+    BambuddyConfigEntry,
+    BambuddyCoordinator,
+    BambuddyStats,
+    BambuddyStatsCoordinator,
+)
 from .entity import (
     BambuddyHubEntity,
     BambuddyPrinterEntity,
     add_entities_when_seen,
+    hub_device_info,
     is_printing,
     job_name,
     jobs_attribute,
@@ -123,7 +133,25 @@ def _next_job_attrs(entity: BambuddyPrinterEntity) -> dict[str, Any]:
     return {
         "printer_id": entity.printer_id,
         "next_job": job_name(pending[0]) if pending else None,
-        "jobs": jobs_attribute(pending),
+        "jobs": jobs_attribute(pending, entity.coordinator.data),
+    }
+
+
+def _schedule_attrs(entity: BambuddyPrinterEntity) -> dict[str, Any]:
+    """The printer's timeline: running print, then queued jobs with estimates."""
+    entries = entity.coordinator.data.plan.schedule.get(entity.printer_id, [])
+    return {
+        "schedule": [
+            {
+                "id": e["id"],
+                "name": e["name"],
+                "start": e["start"].isoformat() if e["start"] else None,
+                "end": e["end"].isoformat() if e["end"] else None,
+                "running": e["running"],
+                "predicted": e.get("predicted", False),
+            }
+            for e in entries[:MAX_JOBS_IN_ATTRIBUTES]
+        ]
     }
 
 
@@ -238,6 +266,13 @@ PRINTER_SENSORS: tuple[BambuddyPrinterSensorDescription, ...] = (
         exists_fn=_has_temperature("chamber"),
     ),
     BambuddyPrinterSensorDescription(
+        key="free_at",
+        translation_key="free_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda e: e.coordinator.data.plan.free_at.get(e.printer_id),
+        attrs_fn=_schedule_attrs,
+    ),
+    BambuddyPrinterSensorDescription(
         key="queue",
         translation_key="printer_queue",
         state_class=SensorStateClass.MEASUREMENT,
@@ -340,6 +375,9 @@ async def async_setup_entry(
     async_add_entities(
         BambuddyQueueSensor(coordinator, description) for description in QUEUE_SENSORS
     )
+    async_add_entities([BambuddyFarmDoneSensor(coordinator)])
+    stats = [d for d in STATS_SENSORS if not d.cost or entry.options.get(CONF_ENABLE_COSTS)]
+    async_add_entities(BambuddyStatsSensor(coordinator, d) for d in stats)
 
     def candidates():
         for printer_id in coordinator.data.printers:
@@ -623,5 +661,192 @@ class BambuddyQueueSensor(BambuddyHubEntity, SensorEntity):
         items = self._items
         return {
             "next_job": job_name(items[0]) if items else None,
-            "jobs": jobs_attribute(items),
+            "jobs": jobs_attribute(items, self.coordinator.data),
         }
+
+
+class BambuddyFarmDoneSensor(BambuddyHubEntity, SensorEntity):
+    """When every running print and every estimable queued job is done."""
+
+    _attr_translation_key = "farm_done_at"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: BambuddyCoordinator) -> None:
+        super().__init__(coordinator, "farm_done_at")
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.data.plan.farm_done_at
+
+
+def _rate(stats: dict[str, Any]) -> float | None:
+    done = (stats.get("successful_prints") or 0) + (stats.get("failed_prints") or 0)
+    return round(100 * (stats.get("successful_prints") or 0) / done, 1) if done else None
+
+
+@dataclass(frozen=True, kw_only=True)
+class BambuddyStatsSensorDescription(SensorEntityDescription):
+    value_fn: Callable[[BambuddyStats], Any]
+    attrs_fn: Callable[[BambuddyStats], dict[str, Any]] | None = None
+    cost: bool = False  # only with the "costs" option
+    money: bool = False  # unit is Bambuddy's currency
+
+
+def _total_attrs(stats: BambuddyStats) -> dict[str, Any]:
+    total = stats.total
+    names = total.get("printer_names") or {}
+    return {
+        "successful": total.get("successful_prints"),
+        "failed": total.get("failed_prints"),
+        "cancelled": total.get("cancelled_prints"),
+        "by_printer": {
+            names.get(str(k), str(k)): v for k, v in (total.get("prints_by_printer") or {}).items()
+        },
+        "by_filament_type": total.get("prints_by_filament_type") or {},
+    }
+
+
+STATS_SENSORS: tuple[BambuddyStatsSensorDescription, ...] = (
+    BambuddyStatsSensorDescription(
+        key="prints_total",
+        translation_key="prints_total",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_fn=lambda s: s.total.get("total_prints"),
+        attrs_fn=_total_attrs,
+    ),
+    BambuddyStatsSensorDescription(
+        key="prints_month",
+        translation_key="prints_month",
+        value_fn=lambda s: s.month.get("total_prints"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="prints_today",
+        translation_key="prints_today",
+        value_fn=lambda s: s.today.get("total_prints"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="success_rate",
+        translation_key="success_rate",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda s: _rate(s.total),
+    ),
+    BambuddyStatsSensorDescription(
+        key="print_time_total",
+        translation_key="print_time_total",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=0,
+        value_fn=lambda s: s.total.get("total_print_time_hours"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="filament_total",
+        translation_key="filament_total",
+        device_class=SensorDeviceClass.WEIGHT,
+        native_unit_of_measurement=UnitOfMass.GRAMS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=0,
+        value_fn=lambda s: s.total.get("total_filament_grams"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="filament_month",
+        translation_key="filament_month",
+        device_class=SensorDeviceClass.WEIGHT,
+        native_unit_of_measurement=UnitOfMass.GRAMS,
+        suggested_display_precision=0,
+        value_fn=lambda s: s.month.get("total_filament_grams"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="filament_cost_total",
+        translation_key="filament_cost_total",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        suggested_display_precision=2,
+        cost=True,
+        money=True,
+        value_fn=lambda s: s.total.get("total_cost"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="filament_cost_month",
+        translation_key="filament_cost_month",
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        cost=True,
+        money=True,
+        value_fn=lambda s: s.month.get("total_cost"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="energy_total",
+        translation_key="energy_total",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
+        cost=True,
+        value_fn=lambda s: s.total.get("total_energy_kwh"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="energy_month",
+        translation_key="energy_month",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        cost=True,
+        value_fn=lambda s: s.month.get("total_energy_kwh"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="energy_cost_total",
+        translation_key="energy_cost_total",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        suggested_display_precision=2,
+        cost=True,
+        money=True,
+        value_fn=lambda s: s.total.get("total_energy_cost"),
+    ),
+    BambuddyStatsSensorDescription(
+        key="energy_cost_month",
+        translation_key="energy_cost_month",
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        cost=True,
+        money=True,
+        value_fn=lambda s: s.month.get("total_energy_cost"),
+    ),
+)
+
+
+class BambuddyStatsSensor(CoordinatorEntity[BambuddyStatsCoordinator], SensorEntity):
+    """Statistics from Bambuddy's print log, on the Bambuddy device."""
+
+    _attr_has_entity_name = True
+    entity_description: BambuddyStatsSensorDescription
+
+    def __init__(
+        self, coordinator: BambuddyCoordinator, description: BambuddyStatsSensorDescription
+    ) -> None:
+        super().__init__(coordinator.stats)
+        self.entity_description = description
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{description.key}"
+        self._attr_device_info = hub_device_info(coordinator)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data is not None
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        if self.entity_description.money:
+            return (self.coordinator.data.currency if self.coordinator.data else None) or "EUR"
+        return super().native_unit_of_measurement
+
+    @property
+    def native_value(self) -> Any:
+        return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self.entity_description.attrs_fn is None or self.coordinator.data is None:
+            return None
+        return self.entity_description.attrs_fn(self.coordinator.data)
