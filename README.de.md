@@ -198,6 +198,8 @@ Jede neue Version erscheint als Release auf GitHub. HACS meldet sie unter **Eins
 
 ## Fehlerbehebung
 
+**Die Karte fehlt in der Kartenauswahl, zeigt dort einen Ladekreis oder im Bearbeitungsmodus „Custom element doesn't exist“.** Auf 0.11.1 oder neuer aktualisieren und die Seite neu laden. (Ältere Versionen haben die Karte zu früh geladen, bevor Home Assistant sein Frontend eingerichtet hatte.)
+
 **Die Karte zeigt „Konfigurationsfehler“ / „Custom element doesn't exist“ (oft nur am Handy).** Seite neu laden. In der Companion-App: **Einstellungen** → **Companion App** → **Debugging** → **Frontend-Cache zurücksetzen**. Die Karte ist unter **Einstellungen** → **Dashboards** → **⋮** → **Ressourcen** eingetragen.
 
 **Ein Knopf oder eine Aktion meldet fehlende Rechte.** Dem API-Schlüssel fehlt „Drucker steuern“ oder „Warteschlange verwalten“. Schlüssel in Bambuddy bearbeiten.

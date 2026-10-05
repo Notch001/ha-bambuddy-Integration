@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.11.0";
+const CARD_VERSION = "0.11.1";
 
 const TEXT = {
   de: {
@@ -1129,15 +1129,39 @@ const WALL_STYLE = `
   .wall .seg { line-height: 24px; font-size: 0.8em; }
 `;
 
-if (!customElements.get("bambuddy-card")) {
-  customElements.define("bambuddy-card", BambuddyCard);
+// Home Assistant swaps window.customElements for a scoped registry while its
+// app starts. A copy of this file that runs before that (e.g. injected into
+// the page) defines the card in the old registry, where the dashboard editor
+// and card picker never look. So: define now, and again in the current
+// registry whenever it has been swapped, for the first minute.
+function registerCard() {
+  const registry = window.customElements;
+  if (!registry.get("bambuddy-card")) {
+    try {
+      registry.define("bambuddy-card", class extends BambuddyCard {});
+    } catch (err) {
+      // Defined in the meantime by another copy of this file: fine.
+    }
+  }
   window.customCards = window.customCards || [];
-  window.customCards.push({
-    type: "bambuddy-card",
-    name: "Bambuddy",
-    description: "Drucker, AMS und Warteschlange aus Bambuddy auf einen Blick.",
-    preview: true,
-    documentationURL: "https://github.com/Notch001/ha-bambuddy-integration",
-  });
+  if (!window.customCards.some((c) => c.type === "bambuddy-card")) {
+    window.customCards.push({
+      type: "bambuddy-card",
+      name: "Bambuddy",
+      description: "Drucker, AMS und Warteschlange aus Bambuddy auf einen Blick.",
+      preview: true,
+      documentationURL: "https://github.com/Notch001/ha-bambuddy-integration",
+    });
+  }
+}
+
+if (!window.__bambuddyCardLoaded) {
+  window.__bambuddyCardLoaded = true;
+  registerCard();
+  let checks = 0;
+  const timer = setInterval(() => {
+    registerCard();
+    if (++checks >= 60) clearInterval(timer);
+  }, 1000);
   console.info(`%c BAMBUDDY-CARD %c ${CARD_VERSION} `, "background:#00ae42;color:#fff;font-weight:700", "");
 }

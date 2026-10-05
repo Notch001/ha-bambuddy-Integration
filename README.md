@@ -202,7 +202,9 @@ Every new version is published as a GitHub release. HACS shows it under **Settin
 
 ## Troubleshooting
 
-**The card shows "Configuration error" / "Custom element doesn't exist" (often only on the phone).** Reload the page. In the companion app: **Settings** → **Companion app** → **Debugging** → **Reset frontend cache**. The card is registered under **Settings** → **Dashboards** → **⋮** → **Resources**.
+**The card is missing from the card picker, shows a spinner there, or says "Custom element doesn't exist" in edit mode.** Update to 0.11.1 or newer and reload the page. (Older versions loaded the card too early, before Home Assistant had set up its frontend.)
+
+**The card shows "Configuration error" / "Custom element doesn't exist" (often only on the phone). Reload the page. In the companion app: **Settings** → **Companion app** → **Debugging** → **Reset frontend cache**. The card is registered under **Settings** → **Dashboards** → **⋮** → **Resources**.
 
 **A button or action shows a permission error.** The API key lacks "Control Printer" or "Manage Queue". Edit the key in Bambuddy.
 

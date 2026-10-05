@@ -57,15 +57,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # The version makes browsers fetch the new card after an update.
     url = f"{CARD_URL}?v={(await async_get_integration(hass, DOMAIN)).version}"
 
-    if "frontend" in hass.config.components:
-        from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
-
-        # Covers YAML-mode dashboards; baked into the page HTML, which the
-        # companion apps may keep cached across updates.
-        add_extra_js_url(hass, url)
-
     async def _register(_event: Event | None = None) -> None:
-        await _async_register_card_resource(hass, url)
+        if not await _async_register_card_resource(hass, url) and "frontend" in hass.config.components:
+            # YAML-mode dashboards manage their own resources; fall back to
+            # injecting the script into the page. Injected scripts run before
+            # Home Assistant swaps in its scoped element registry, which the
+            # card handles by registering itself again (see bambuddy-card.js).
+            from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
+
+            add_extra_js_url(hass, url)
 
     if hass.state is CoreState.running:
         await _register()
@@ -74,16 +74,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def _async_register_card_resource(hass: HomeAssistant, url: str) -> None:
+async def _async_register_card_resource(hass: HomeAssistant, url: str) -> bool:
     """Add the card to the dashboard resources (storage mode), like HACS does.
 
-    Dashboards fetch their resources fresh on every load, so this also works
-    in the companion apps. Keeps exactly one entry and moves its version along.
+    Dashboards load their resources after Home Assistant's frontend has set
+    itself up, so the card lands in the registry the editor and card picker
+    use; it also works in the companion apps. Keeps exactly one entry and
+    moves its version along. Returns False if resources can't be managed.
     """
     lovelace = hass.data.get("lovelace")
     resources = getattr(lovelace, "resources", None)
     if resources is None or getattr(lovelace, "resource_mode", "storage") != "storage":
-        return
+        return False
     try:
         if not getattr(resources, "loaded", True):
             await resources.async_load()
@@ -92,10 +94,12 @@ async def _async_register_card_resource(hass: HomeAssistant, url: str) -> None:
             if item.get("url", "").split("?")[0] == CARD_URL:
                 if item["url"] != url:
                     await resources.async_update_item(item["id"], {"res_type": "module", "url": url})
-                return
+                return True
         await resources.async_create_item({"res_type": "module", "url": url})
     except Exception:  # noqa: BLE001 - the card is a bonus, never fail setup over it
         _LOGGER.warning("Could not register the Bambuddy card as a dashboard resource", exc_info=True)
+        return False
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> bool:
