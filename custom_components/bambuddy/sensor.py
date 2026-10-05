@@ -553,6 +553,9 @@ class BambuddySpoolSensor(BambuddyPrinterEntity, SensorEntity):
             "nozzle_temp_max": tray.get("nozzle_temp_max"),
             "k": tray.get("k"),
             "active": (self.status or {}).get("tray_now") == self._global_tray_id,
+            # For dashboards that lay slots out like the real AMS.
+            "ams": self._attr_translation_placeholders.get("unit"),
+            "slot": self.tray_id + 1 if self.ams_id is not None else None,
         }
 
     @property

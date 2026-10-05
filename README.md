@@ -111,6 +111,32 @@ Jeder Eintrag in `jobs` enthält: `id`, `name`, `status`, `printer` (bei nicht z
 
 HACS meldet neue Versionen automatisch unter **Einstellungen** → **Updates**. Nach dem Update Home Assistant neu starten.
 
+## Dashboard-Karte
+
+Die Integration bringt eine eigene Karte mit. Sie wird automatisch geladen, du musst nichts extra installieren.
+
+<img src="docs/card.png" alt="Bambuddy-Karte (Beispieldaten)" width="420">
+
+**Hinzufügen:** Dashboard bearbeiten → **Karte hinzufügen** → nach **Bambuddy** suchen. Die Karte findet alle Drucker selbst. Im Karteneditor kannst du Drucker auswählen und Bereiche (Temperaturen, AMS, Steuerung, Kamera, Warteschlange) ein- und ausblenden.
+
+Oder per YAML:
+
+```yaml
+type: custom:bambuddy-card
+title: 3D-Drucker            # optional
+printers: []                 # optional: Geräte-IDs, leer = alle Drucker
+show_temperatures: true
+show_ams: true
+show_controls: true          # braucht das Recht „Drucker steuern“
+show_camera: false
+show_queue: true
+queue_limit: 5               # so viele wartende Aufträge werden gezeigt
+```
+
+Ein Klick auf einen Wert öffnet die Details der jeweiligen Entität. „Abbrechen“ fragt vorher nach.
+
+Falls die Karte nach einem Update nicht erscheint: Browser-Seite einmal neu laden (am Handy die Companion-App: **Einstellungen** → **Companion App** → **Debugging** → **Frontend-Cache zurücksetzen**).
+
 ## Warteschlange als Liste anzeigen
 
 Die Entität **Druck-Warteschlange** ist eine To-do-Liste. Laufende Drucke stehen oben mit ▶, darunter die wartenden Aufträge in der Reihenfolge, in der Bambuddy sie startet. Unter jedem Auftrag stehen Drucker, Druckdauer, Filament und, falls vorhanden, warum er noch wartet. Bearbeitet wird die Warteschlange weiterhin in Bambuddy; in Home Assistant ist die Liste nur zum Anschauen.

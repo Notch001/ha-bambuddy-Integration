@@ -24,3 +24,17 @@ async def test_queue_todo_list(hass: HomeAssistant, aioclient_mock) -> None:
     assert items[2]["description"] == "X1C Werkstatt · 60 min · PETG"
     # Read-only: Home Assistant must not offer editing
     assert hass.states.get(entity_id).attributes.get("supported_features", 0) == 0
+
+
+async def test_card_is_served(hass: HomeAssistant, aioclient_mock, hass_client) -> None:
+    """The dashboard card ships with the integration and is served by HA."""
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "http", {})
+    mock_bambuddy(aioclient_mock)
+    await _setup(hass)
+
+    client = await hass_client()
+    resp = await client.get("/bambuddy/bambuddy-card.js")
+    assert resp.status == 200
+    assert "customElements.define(\"bambuddy-card\"" in await resp.text()

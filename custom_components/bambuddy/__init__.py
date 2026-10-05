@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.const import CONF_URL, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .api import BambuddyApiClient
-from .const import CONF_API_KEY
+from .const import CONF_API_KEY, DOMAIN
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
 from .entity import hub_device_info
 
@@ -22,6 +27,26 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.TODO,
 ]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+CARD_URL = "/bambuddy/bambuddy-card.js"
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Serve the dashboard card and load it into every browser."""
+    if getattr(hass, "http", None) is None:
+        return True
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARD_URL, str(Path(__file__).parent / "frontend" / "bambuddy-card.js"), True)]
+    )
+    if "frontend" in hass.config.components:
+        from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
+
+        # The version makes browsers fetch the new card after an update.
+        version = (await async_get_integration(hass, DOMAIN)).version
+        add_extra_js_url(hass, f"{CARD_URL}?v={version}")
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> bool:
