@@ -17,6 +17,7 @@ REQUEST_TIMEOUT: Final = timedelta(seconds=15)
 # X1/H2/P2 snapshots go through ffmpeg on the Bambuddy side and can be slow.
 CAMERA_TIMEOUT: Final = timedelta(seconds=30)
 CAMERA_TOKEN_LIFETIME: Final = timedelta(minutes=50)
+COLOR_MAP_REFRESH: Final = timedelta(hours=1)
 
 # Bambu print speed levels as Bambuddy reports and accepts them.
 SPEED_LEVELS: Final = {1: "silent", 2: "standard", 3: "sport", 4: "ludicrous"}

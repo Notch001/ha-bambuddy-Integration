@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import BambuddyApiClient, BambuddyAuthError, BambuddyError
 from .const import (
+    COLOR_MAP_REFRESH,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -36,6 +37,8 @@ class BambuddyData:
     status: dict[int, dict[str, Any] | None] = field(default_factory=dict)
     # Pending and printing queue items, in dispatch order
     queue: list[dict[str, Any]] = field(default_factory=list)
+    # Bambuddy's colour catalogue, see BambuddyApiClient.get_color_map
+    colors: dict[str, Any] = field(default_factory=dict)
 
 
 class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
@@ -58,6 +61,8 @@ class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
             update_interval=timedelta(seconds=interval),
         )
         self.client = client
+        self._colors: dict[str, Any] = {}
+        self._colors_fetched = 0.0
 
     async def _async_update_data(self) -> BambuddyData:
         try:
@@ -97,4 +102,20 @@ class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
             printers={p["id"]: p for p in printers},
             status=status,
             queue=queue,
+            colors=await self._async_colors(),
         )
+
+    async def _async_colors(self) -> dict[str, Any]:
+        """The colour catalogue changes rarely; refresh it once an hour.
+
+        Only used for nicer names, so a failure keeps the last copy (or none).
+        """
+        now = self.hass.loop.time()
+        if self._colors_fetched and now - self._colors_fetched < COLOR_MAP_REFRESH.total_seconds():
+            return self._colors
+        self._colors_fetched = now
+        try:
+            self._colors = await self.client.get_color_map()
+        except BambuddyError as err:
+            _LOGGER.debug("Could not fetch Bambuddy colour names: %s", err)
+        return self._colors

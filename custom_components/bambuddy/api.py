@@ -127,6 +127,10 @@ class BambuddyApiClient:
         params = {"status": status} if status else None
         return await self._get("/queue/", params=params)
 
+    async def get_color_map(self) -> dict[str, Any]:
+        """Bambuddy's colour names: {"colors": {hex: name}, "by_material": {"material|hex": name}}."""
+        return await self._get("/inventory/colors/map")
+
     async def get_cover(self, printer_id: int) -> tuple[bytes, str]:
         """Return the preview image of the current print."""
         return await self._request("GET", f"/printers/{printer_id}/cover", raw=True)

@@ -1,5 +1,7 @@
 """AMS, controls, cover image and camera."""
 
+import base64
+
 import pytest
 
 from homeassistant.components.camera import async_get_image
@@ -27,20 +29,28 @@ async def test_ams_sensors(hass: HomeAssistant, aioclient_mock) -> None:
     assert er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{X1}_ams0_drying_remaining") is None
 
     slot1 = _state(hass, "sensor", f"{X1}_ams0_tray0")
-    assert slot1.state == "PLA Basic"
+    # Type and colour name from Bambuddy's colour catalogue
+    assert slot1.state == "PLA Basic · Red"
     assert slot1.attributes["color"] == "#FF0000"
+    assert slot1.attributes["color_name"] == "Red"
     assert slot1.attributes["remaining"] == 80
     assert slot1.attributes["active"] is False
-    assert "%23FF0000" in slot1.attributes["entity_picture"]
+    picture = slot1.attributes["entity_picture"]
+    assert picture.startswith("data:image/svg+xml;base64,")
+    assert "#FF0000" in base64.b64decode(picture.split(",", 1)[1]).decode()
+    # No spaces/quotes: safe inside CSS url(...)
+    assert " " not in picture and "'" not in picture
     assert slot1.name.endswith("AMS 1 Slot 1") or slot1.name.endswith("AMS 1 slot 1")
 
     slot2 = _state(hass, "sensor", f"{X1}_ams0_tray1")
+    assert slot2.state == "PETG HF · Bambu Green"
     assert slot2.attributes["remaining"] is None  # -1 = unknown
     assert slot2.attributes["active"] is True  # tray_now == 1
 
     assert _state(hass, "sensor", f"{X1}_ams0_tray2").state == "empty"
     assert _state(hass, "sensor", f"{X1}_ams0_tray3").state == "unknown"
-    assert _state(hass, "sensor", f"{X1}_external_254").state == "TPU"
+    # Colour not in the catalogue -> nearest basic colour name
+    assert _state(hass, "sensor", f"{X1}_external_254").state == "TPU · Black"
 
     assert _state(hass, "sensor", f"{X1}_stage").state == "Heatbed preheating"
     assert _state(hass, "sensor", f"{X1}_nozzle").state == "0.4 mm"
@@ -135,3 +145,14 @@ async def test_camera_snapshot(hass: HomeAssistant, aioclient_mock) -> None:
 
     # Offline printer -> camera unavailable
     assert _state(hass, "camera", f"{A1}_camera").state == STATE_UNAVAILABLE
+
+
+def test_color_name_prefers_material_specific_entry() -> None:
+    from custom_components.bambuddy.colors import color_name
+
+    catalog = {"colors": {"ffffff": "Jade White"}, "by_material": {"pla matte|ffffff": "Ivory White"}}
+    assert color_name("#FFFFFF", "PLA Matte", catalog, "de") == "Ivory White"
+    assert color_name("#FFFFFF", "PLA Basic", catalog, "de") == "Jade White"
+    assert color_name("#D01010", None, {}, "de") == "Rot"
+    assert color_name("#D01010", None, {}, "en") == "Red"
+    assert color_name(None, None, catalog, "de") is None

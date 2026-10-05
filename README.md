@@ -10,6 +10,10 @@ Sie zeigt dir in Home Assistant:
 - **Bilder:** Vorschau des aktuellen Drucks und das Kamerabild des Druckers.
 - **Steuerung:** Pausieren, Fortsetzen, Abbrechen, Druckplatte als geräumt bestätigen, Bauraumbeleuchtung und Druckgeschwindigkeit.
 
+## Symbol
+
+Ab Home Assistant 2026.3 zeigt die Integration ihr Bambuddy-Symbol in der Integrationsliste. In älteren Versionen erscheint stattdessen ein Platzhalter. Das Symbol ist das Logo des Projekts [Bambuddy](https://github.com/maziggy/bambuddy) von maziggy.
+
 ## Voraussetzungen
 
 - Home Assistant 2025.3 oder neuer
@@ -74,7 +78,7 @@ Neu in Bambuddy angelegte Drucker tauchen automatisch auf. Das Abfrageintervall 
 
 | Entität | Beschreibung |
 |---|---|
-| AMS 1 Slot 1 … | Filamentname (z. B. „PLA Basic“), „Leer“ oder „Unbekannt“. Das Symbol zeigt die Filamentfarbe. Attribute: `type`, `color`, `remaining` (in %, nur bei Bambu-Spulen mit RFID), `nozzle_temp_min`, `nozzle_temp_max`, `active` (wird gerade gedruckt) |
+| AMS 1 Slot 1 … | Filament und Farbe, z. B. „PLA Basic · Jade White“, sonst „Leer“ oder „Unbekannt“. Die Farbnamen kommen aus dem Farbkatalog von Bambuddy; fehlt dort ein Eintrag, steht ein Grundfarbname da (z. B. „Rot“). Das Symbol ist eine Spule in der Filamentfarbe. Attribute: `type`, `color`, `color_name`, `remaining` (in %, nur bei Bambu-Spulen mit RFID), `nozzle_temp_min`, `nozzle_temp_max`, `active` (wird gerade gedruckt) |
 | Externe Spule | dasselbe für die Spule am Halter außen |
 | AMS 1 Luftfeuchtigkeit / Temperatur | |
 | AMS 1 Trocknung Restzeit | nur bei Druckern, deren AMS trocknen kann |

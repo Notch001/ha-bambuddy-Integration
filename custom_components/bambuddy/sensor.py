@@ -25,6 +25,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
+from .colors import color_name, hex_color, spool_picture
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
 from .entity import (
     BambuddyHubEntity,
@@ -397,24 +398,6 @@ def _find_tray(
     return None
 
 
-def _hex_color(raw: str | None) -> str | None:
-    """Bambu reports RRGGBBAA; Home Assistant wants #RRGGBB."""
-    if not raw or len(raw) < 6:
-        return None
-    return f"#{raw[:6].upper()}"
-
-
-def _spool_picture(color: str) -> str:
-    """A small spool-shaped circle in the filament color, as a data URI."""
-    fill = color.replace("#", "%23")
-    return (
-        "data:image/svg+xml;utf8,"
-        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>"
-        f"<circle cx='12' cy='12' r='11' fill='{fill}' stroke='%23888' stroke-width='1'/>"
-        "<circle cx='12' cy='12' r='3' fill='white' stroke='%23888' stroke-width='1'/></svg>"
-    )
-
-
 @dataclass(frozen=True, kw_only=True)
 class BambuddyAmsSensorDescription(SensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], Any]
@@ -531,14 +514,28 @@ class BambuddySpoolSensor(BambuddyPrinterEntity, SensorEntity):
             return None
         if self._empty:
             return "empty"
-        return tray.get("tray_sub_brands") or tray.get("tray_type") or "unknown"
+        material = tray.get("tray_sub_brands") or tray.get("tray_type")
+        if not material:
+            return "unknown"
+        color = self._color_name
+        return f"{material} · {color}" if color else material
+
+    @property
+    def _color_name(self) -> str | None:
+        tray = self.tray or {}
+        return color_name(
+            hex_color(tray.get("tray_color")),
+            tray.get("tray_sub_brands"),
+            self.coordinator.data.colors,
+            self.hass.config.language if self.hass else "en",
+        )
 
     @property
     def entity_picture(self) -> str | None:
-        color = _hex_color((self.tray or {}).get("tray_color"))
+        color = hex_color((self.tray or {}).get("tray_color"))
         if self._empty or color is None:
             return None
-        return _spool_picture(color)
+        return spool_picture(color)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -547,7 +544,8 @@ class BambuddySpoolSensor(BambuddyPrinterEntity, SensorEntity):
         return {
             "type": tray.get("tray_type") or None,
             "name": tray.get("tray_sub_brands") or None,
-            "color": _hex_color(tray.get("tray_color")),
+            "color": hex_color(tray.get("tray_color")),
+            "color_name": None if self._empty else self._color_name,
             "remaining": remain if isinstance(remain, int) and remain >= 0 else None,
             "nozzle_temp_min": tray.get("nozzle_temp_min"),
             "nozzle_temp_max": tray.get("nozzle_temp_max"),

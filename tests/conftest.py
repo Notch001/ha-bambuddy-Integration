@@ -93,6 +93,10 @@ def mock_bambuddy(aioclient_mock, *, status: dict[int, dict] | None = None, auth
         aioclient_mock.get(f"{API}/printers/{printer_id}/status", json=copy.deepcopy(data))
     aioclient_mock.get(f"{API}/queue/", params={"status": "pending"}, json=copy.deepcopy(QUEUE_PENDING))
     aioclient_mock.get(f"{API}/queue/", params={"status": "printing"}, json=copy.deepcopy(QUEUE_PRINTING))
+    aioclient_mock.get(f"{API}/inventory/colors/map", json={
+        "colors": {"ff0000": "Red", "00ae42": "Bambu Green", "ffffff": "Jade White"},
+        "by_material": {"pla matte|ffffff": "Ivory White"},
+    })
     aioclient_mock.get(f"{API}/printers/1/cover", content=b"PNGDATA", headers={"Content-Type": "image/png"})
     aioclient_mock.post(f"{API}/printers/camera/stream-token", json={"token": "camtoken"})
     aioclient_mock.get(f"{API}/printers/1/camera/snapshot", params={"token": "camtoken"}, content=b"JPEGDATA")
