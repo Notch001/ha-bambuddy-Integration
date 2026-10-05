@@ -111,6 +111,51 @@
       },
       "queue_printing": {
         "name": "Laufende Druckaufträge"
+      },
+      "stage": {
+        "name": "Druckphase"
+      },
+      "cooling_fan": {
+        "name": "Bauteillüfter"
+      },
+      "aux_fan": {
+        "name": "Hilfslüfter"
+      },
+      "chamber_fan": {
+        "name": "Bauraumlüfter"
+      },
+      "nozzle": {
+        "name": "Düse"
+      },
+      "ams_humidity": {
+        "name": "AMS {unit} Luftfeuchtigkeit"
+      },
+      "ams_temperature": {
+        "name": "AMS {unit} Temperatur"
+      },
+      "ams_drying_remaining": {
+        "name": "AMS {unit} Trocknung Restzeit"
+      },
+      "external_spool": {
+        "name": "Externe Spule",
+        "state": {
+          "empty": "Leer",
+          "unknown": "Unbekannt"
+        }
+      },
+      "external_spool_n": {
+        "name": "Externe Spule {n}",
+        "state": {
+          "empty": "Leer",
+          "unknown": "Unbekannt"
+        }
+      },
+      "ams_tray": {
+        "name": "AMS {unit} Slot {slot}",
+        "state": {
+          "empty": "Leer",
+          "unknown": "Unbekannt"
+        }
       }
     },
     "binary_sensor": {
@@ -128,7 +173,64 @@
       },
       "door": {
         "name": "Tür"
+      },
+      "sdcard": {
+        "name": "SD-Karte"
+      },
+      "timelapse": {
+        "name": "Zeitraffer"
       }
+    },
+    "button": {
+      "pause": {
+        "name": "Pausieren"
+      },
+      "resume": {
+        "name": "Fortsetzen"
+      },
+      "stop": {
+        "name": "Druck abbrechen"
+      },
+      "clear_plate": {
+        "name": "Druckplatte geräumt"
+      }
+    },
+    "light": {
+      "chamber_light": {
+        "name": "Bauraumbeleuchtung"
+      }
+    },
+    "select": {
+      "print_speed": {
+        "name": "Druckgeschwindigkeit",
+        "state": {
+          "silent": "Leise",
+          "standard": "Standard",
+          "sport": "Sport",
+          "ludicrous": "Turbo"
+        }
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Kamera"
+      }
+    },
+    "image": {
+      "cover": {
+        "name": "Druckvorschau"
+      }
+    }
+  },
+  "exceptions": {
+    "no_control_permission": {
+      "message": "Der API-Schlüssel darf den Drucker nicht steuern. Aktiviere in Bambuddy beim API-Schlüssel das Recht „Drucker steuern“."
+    },
+    "action_rejected": {
+      "message": "Bambuddy hat die Aktion abgelehnt: {detail}"
+    },
+    "cannot_connect": {
+      "message": "Bambuddy ist nicht erreichbar: {detail}"
     }
   }
 }

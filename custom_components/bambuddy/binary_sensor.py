@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -11,11 +12,12 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import EntityCategory
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
-from .entity import BambuddyPrinterEntity
+from .entity import BambuddyPrinterEntity, add_entities_when_seen
 
 PARALLEL_UPDATES = 0
 
@@ -56,6 +58,20 @@ BINARY_SENSORS: tuple[BambuddyBinarySensorDescription, ...] = (
         entity_registry_enabled_default=False,
         value_fn=lambda s: bool(s.get("door_open")),
     ),
+    BambuddyBinarySensorDescription(
+        key="sdcard",
+        translation_key="sdcard",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda s: bool(s.get("sdcard")),
+    ),
+    BambuddyBinarySensorDescription(
+        key="timelapse",
+        translation_key="timelapse",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda s: bool(s.get("timelapse")),
+    ),
 )
 
 
@@ -65,22 +81,16 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    known: set[int] = set()
 
-    @callback
-    def _add_new_printers() -> None:
-        new_ids = set(coordinator.data.printers) - known
-        if not new_ids:
-            return
-        known.update(new_ids)
-        async_add_entities(
-            BambuddyBinarySensor(coordinator, printer_id, description)
-            for printer_id in new_ids
-            for description in BINARY_SENSORS
-        )
+    def candidates():
+        for printer_id in coordinator.data.printers:
+            for description in BINARY_SENSORS:
+                yield (
+                    f"{printer_id}:{description.key}",
+                    partial(BambuddyBinarySensor, coordinator, printer_id, description),
+                )
 
-    _add_new_printers()
-    entry.async_on_unload(coordinator.async_add_listener(_add_new_printers))
+    add_entities_when_seen(entry, async_add_entities, candidates)
 
 
 class BambuddyBinarySensor(BambuddyPrinterEntity, BinarySensorEntity):

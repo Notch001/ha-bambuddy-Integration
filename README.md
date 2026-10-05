@@ -6,8 +6,9 @@ Sie zeigt dir in Home Assistant:
 
 - **Den Zustand jedes Druckers:** Status, aktueller Druck, Fortschritt, Restzeit, voraussichtliches Ende, Schicht, Temperaturen, Online/Offline, Fehler, „Druckplatte räumen“.
 - **Die Warteschlange:** wartende und laufende Druckaufträge, insgesamt und pro Drucker, mit der Liste der Aufträge als Attribut.
-
-Die Integration liest nur. Sie startet, stoppt oder ändert nichts in Bambuddy.
+- **AMS und Filament:** pro Slot Filament, Farbe und Restmenge, dazu Luftfeuchtigkeit und Temperatur jedes AMS.
+- **Bilder:** Vorschau des aktuellen Drucks und das Kamerabild des Druckers.
+- **Steuerung:** Pausieren, Fortsetzen, Abbrechen, Druckplatte als geräumt bestätigen, Bauraumbeleuchtung und Druckgeschwindigkeit.
 
 ## Voraussetzungen
 
@@ -23,7 +24,7 @@ Nur nötig, wenn in Bambuddy die Anmeldung eingeschaltet ist.
 
 1. Bambuddy im Browser öffnen → **Einstellungen** → **API-Schlüssel**.
 2. **Schlüssel erstellen**, Name z. B. `Home Assistant`.
-3. Nur **Status lesen** anhaken, alle anderen Rechte können aus bleiben.
+3. **Status lesen** anhaken. Wenn du den Drucker aus Home Assistant steuern willst (Pause, Abbrechen, Licht, Geschwindigkeit), zusätzlich **Drucker steuern**. Alle anderen Rechte können aus bleiben.
 4. Den angezeigten Schlüssel (beginnt mit `bb_`) **sofort kopieren**. Er wird nur einmal angezeigt.
 
 ### 2. Integration über HACS installieren
@@ -64,8 +65,37 @@ Neu in Bambuddy angelegte Drucker tauchen automatisch auf. Das Abfrageintervall 
 | Düsen-, Bett-, Bauraumtemperatur | Ist- und Zielwerte (Bauraum und zweite Düse nur, wenn der Drucker sie meldet) |
 | Warteschlange | Anzahl der Aufträge, die fest diesem Drucker zugewiesen sind; Attribute `next_job` und `jobs` |
 | Fehlermeldungen | Anzahl der HMS-Meldungen; Details im Attribut `errors` |
+| Druckphase | z. B. „Heatbed preheating“, „Auto bed leveling“ |
 | Online, Druckt, Fehler, Druckplatte räumen | An/Aus-Sensoren |
-| Tür, WLAN-Signal | standardmäßig deaktiviert, bei Bedarf einschalten |
+| Düse | Durchmesser; Typ im Attribut `nozzles` |
+| Tür, WLAN-Signal, Lüfter, SD-Karte, Zeitraffer | standardmäßig deaktiviert, bei Bedarf einschalten |
+
+### AMS und Filament (pro Drucker)
+
+| Entität | Beschreibung |
+|---|---|
+| AMS 1 Slot 1 … | Filamentname (z. B. „PLA Basic“), „Leer“ oder „Unbekannt“. Das Symbol zeigt die Filamentfarbe. Attribute: `type`, `color`, `remaining` (in %, nur bei Bambu-Spulen mit RFID), `nozzle_temp_min`, `nozzle_temp_max`, `active` (wird gerade gedruckt) |
+| Externe Spule | dasselbe für die Spule am Halter außen |
+| AMS 1 Luftfeuchtigkeit / Temperatur | |
+| AMS 1 Trocknung Restzeit | nur bei Druckern, deren AMS trocknen kann |
+
+### Bilder (pro Drucker)
+
+| Entität | Beschreibung |
+|---|---|
+| Druckvorschau | Vorschaubild des laufenden Drucks aus der 3MF-Datei |
+| Kamera | Kamerabild und Livestream, über Bambuddy weitergeleitet |
+
+### Steuerung (pro Drucker)
+
+Braucht beim API-Schlüssel das Recht **Drucker steuern**. Ohne dieses Recht zeigt Home Assistant beim Drücken eine Fehlermeldung, sonst passiert nichts.
+
+| Entität | Beschreibung |
+|---|---|
+| Pausieren / Fortsetzen / Druck abbrechen | Knöpfe, nur aktiv, wenn es gerade passt (z. B. „Fortsetzen“ nur bei pausiertem Druck) |
+| Druckplatte geräumt | bestätigt nach einem fertigen Druck, dass die Platte frei ist, damit Bambuddy den nächsten Auftrag starten kann |
+| Bauraumbeleuchtung | Licht an/aus |
+| Druckgeschwindigkeit | Leise, Standard, Sport, Turbo (nur während eines Drucks) |
 
 ### Bambuddy (Warteschlange)
 
@@ -75,6 +105,10 @@ Neu in Bambuddy angelegte Drucker tauchen automatisch auf. Das Abfrageintervall 
 | Laufende Druckaufträge | Anzahl; Attribut `jobs` |
 
 Jeder Eintrag in `jobs` enthält: `id`, `name`, `status`, `printer` (bei nicht zugewiesenen Aufträgen z. B. „Any A1 Mini“), `position`, `scheduled_time`, `started_at`, `print_time_minutes`, `filament_type`, `filament_grams`, `manual_start`, `waiting_reason`.
+
+## Update
+
+HACS meldet neue Versionen automatisch unter **Einstellungen** → **Updates**. Nach dem Update Home Assistant neu starten.
 
 ## Beispiel: Warteschlange auf dem Dashboard
 

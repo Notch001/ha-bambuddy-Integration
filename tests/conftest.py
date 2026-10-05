@@ -34,6 +34,28 @@ STATUS: dict[int, dict[str, Any]] = {
         "door_open": False,
         "awaiting_plate_clear": False,
         "firmware_version": "01.08.00.00",
+        "speed_level": 2,
+        "chamber_light": False,
+        "stg_cur": 2,
+        "stg_cur_name": "Heatbed preheating",
+        "cooling_fan_speed": 100,
+        "big_fan1_speed": 0,
+        "big_fan2_speed": None,
+        "nozzles": [{"nozzle_type": "hardened_steel", "nozzle_diameter": "0.4"}],
+        "supports_drying": False,
+        "tray_now": 1,
+        "ams": [
+            {
+                "id": 0, "humidity": 23, "temp": 26.5, "is_ams_ht": False, "dry_time": 0,
+                "tray": [
+                    {"id": 0, "tray_type": "PLA", "tray_sub_brands": "PLA Basic", "tray_color": "FF0000FF", "remain": 80, "state": 11, "exists": True},
+                    {"id": 1, "tray_type": "PETG", "tray_sub_brands": "PETG HF", "tray_color": "00AE42FF", "remain": -1, "state": 11, "exists": True},
+                    {"id": 2, "tray_type": "", "tray_color": "", "remain": 0, "state": 9, "exists": False},
+                    {"id": 3, "tray_type": "", "tray_color": "", "remain": 0, "state": 10, "exists": True},
+                ],
+            }
+        ],
+        "vt_tray": [{"id": 254, "tray_type": "TPU", "tray_color": "000000FF", "remain": 0}],
     },
     2: {
         "id": 2,
@@ -71,6 +93,9 @@ def mock_bambuddy(aioclient_mock, *, status: dict[int, dict] | None = None, auth
         aioclient_mock.get(f"{API}/printers/{printer_id}/status", json=copy.deepcopy(data))
     aioclient_mock.get(f"{API}/queue/", params={"status": "pending"}, json=copy.deepcopy(QUEUE_PENDING))
     aioclient_mock.get(f"{API}/queue/", params={"status": "printing"}, json=copy.deepcopy(QUEUE_PRINTING))
+    aioclient_mock.get(f"{API}/printers/1/cover", content=b"PNGDATA", headers={"Content-Type": "image/png"})
+    aioclient_mock.post(f"{API}/printers/camera/stream-token", json={"token": "camtoken"})
+    aioclient_mock.get(f"{API}/printers/1/camera/snapshot", params={"token": "camtoken"}, content=b"JPEGDATA")
 
 
 @pytest.fixture(autouse=True)

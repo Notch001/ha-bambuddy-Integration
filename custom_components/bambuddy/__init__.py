@@ -4,13 +4,23 @@ from __future__ import annotations
 
 from homeassistant.const import CONF_URL, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import BambuddyApiClient
 from .const import CONF_API_KEY
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
+from .entity import hub_device_info
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.CAMERA,
+    Platform.IMAGE,
+    Platform.LIGHT,
+    Platform.SELECT,
+    Platform.SENSOR,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> bool:
@@ -21,6 +31,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> 
     coordinator = BambuddyCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
+
+    # Printers hang off the Bambuddy device (via_device), so it must exist
+    # before any platform registers a printer.
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, **hub_device_info(coordinator)
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))

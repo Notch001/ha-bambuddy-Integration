@@ -14,6 +14,12 @@ MAX_SCAN_INTERVAL: Final = 600
 
 API_PREFIX: Final = "/api/v1"
 REQUEST_TIMEOUT: Final = timedelta(seconds=15)
+# X1/H2/P2 snapshots go through ffmpeg on the Bambuddy side and can be slow.
+CAMERA_TIMEOUT: Final = timedelta(seconds=30)
+CAMERA_TOKEN_LIFETIME: Final = timedelta(minutes=50)
+
+# Bambu print speed levels as Bambuddy reports and accepts them.
+SPEED_LEVELS: Final = {1: "silent", 2: "standard", 3: "sport", 4: "ludicrous"}
 
 # Queue item statuses that are still "in the queue" (not finished history).
 QUEUE_ACTIVE_STATUSES: Final = ("pending", "printing")

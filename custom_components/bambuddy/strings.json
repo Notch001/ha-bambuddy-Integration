@@ -111,6 +111,51 @@
       },
       "queue_printing": {
         "name": "Running print jobs"
+      },
+      "stage": {
+        "name": "Print stage"
+      },
+      "cooling_fan": {
+        "name": "Part cooling fan"
+      },
+      "aux_fan": {
+        "name": "Auxiliary fan"
+      },
+      "chamber_fan": {
+        "name": "Chamber fan"
+      },
+      "nozzle": {
+        "name": "Nozzle"
+      },
+      "ams_humidity": {
+        "name": "AMS {unit} humidity"
+      },
+      "ams_temperature": {
+        "name": "AMS {unit} temperature"
+      },
+      "ams_drying_remaining": {
+        "name": "AMS {unit} drying remaining"
+      },
+      "external_spool": {
+        "name": "External spool",
+        "state": {
+          "empty": "Empty",
+          "unknown": "Unknown"
+        }
+      },
+      "external_spool_n": {
+        "name": "External spool {n}",
+        "state": {
+          "empty": "Empty",
+          "unknown": "Unknown"
+        }
+      },
+      "ams_tray": {
+        "name": "AMS {unit} slot {slot}",
+        "state": {
+          "empty": "Empty",
+          "unknown": "Unknown"
+        }
       }
     },
     "binary_sensor": {
@@ -128,7 +173,64 @@
       },
       "door": {
         "name": "Door"
+      },
+      "sdcard": {
+        "name": "SD card"
+      },
+      "timelapse": {
+        "name": "Timelapse"
       }
+    },
+    "button": {
+      "pause": {
+        "name": "Pause"
+      },
+      "resume": {
+        "name": "Resume"
+      },
+      "stop": {
+        "name": "Stop print"
+      },
+      "clear_plate": {
+        "name": "Build plate cleared"
+      }
+    },
+    "light": {
+      "chamber_light": {
+        "name": "Chamber light"
+      }
+    },
+    "select": {
+      "print_speed": {
+        "name": "Print speed",
+        "state": {
+          "silent": "Silent",
+          "standard": "Standard",
+          "sport": "Sport",
+          "ludicrous": "Ludicrous"
+        }
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Camera"
+      }
+    },
+    "image": {
+      "cover": {
+        "name": "Print preview"
+      }
+    }
+  },
+  "exceptions": {
+    "no_control_permission": {
+      "message": "The API key may not control the printer. Enable the \"control printer\" permission for the API key in Bambuddy."
+    },
+    "action_rejected": {
+      "message": "Bambuddy rejected the action: {detail}"
+    },
+    "cannot_connect": {
+      "message": "Cannot reach Bambuddy: {detail}"
     }
   }
 }

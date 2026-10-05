@@ -1,0 +1,170 @@
+{
+  "entity": {
+    "sensor": {
+      "printer_state": {
+        "default": "mdi:printer-3d",
+        "state": {
+          "running": "mdi:printer-3d-nozzle",
+          "prepare": "mdi:progress-wrench",
+          "slicing": "mdi:progress-wrench",
+          "pause": "mdi:pause-circle",
+          "finish": "mdi:check-circle",
+          "failed": "mdi:alert-circle",
+          "offline": "mdi:printer-3d-off"
+        }
+      },
+      "current_print": {
+        "default": "mdi:cube-outline"
+      },
+      "progress": {
+        "default": "mdi:progress-clock"
+      },
+      "remaining_time": {
+        "default": "mdi:timer-sand"
+      },
+      "end_time": {
+        "default": "mdi:clock-end"
+      },
+      "current_layer": {
+        "default": "mdi:layers-outline"
+      },
+      "total_layers": {
+        "default": "mdi:layers-triple"
+      },
+      "nozzle_temperature": {
+        "default": "mdi:printer-3d-nozzle-heat"
+      },
+      "nozzle_target_temperature": {
+        "default": "mdi:printer-3d-nozzle-heat-outline"
+      },
+      "nozzle_2_temperature": {
+        "default": "mdi:printer-3d-nozzle-heat"
+      },
+      "bed_temperature": {
+        "default": "mdi:radiator"
+      },
+      "bed_target_temperature": {
+        "default": "mdi:radiator-disabled"
+      },
+      "chamber_temperature": {
+        "default": "mdi:thermometer"
+      },
+      "printer_queue": {
+        "default": "mdi:tray-full"
+      },
+      "hms_errors": {
+        "default": "mdi:alert"
+      },
+      "wifi_signal": {
+        "default": "mdi:wifi"
+      },
+      "firmware": {
+        "default": "mdi:chip"
+      },
+      "stage": {
+        "default": "mdi:progress-wrench"
+      },
+      "cooling_fan": {
+        "default": "mdi:fan"
+      },
+      "aux_fan": {
+        "default": "mdi:fan"
+      },
+      "chamber_fan": {
+        "default": "mdi:fan"
+      },
+      "nozzle": {
+        "default": "mdi:printer-3d-nozzle-outline"
+      },
+      "queue_pending": {
+        "default": "mdi:format-list-numbered"
+      },
+      "queue_printing": {
+        "default": "mdi:printer-3d-nozzle"
+      },
+      "ams_humidity": {
+        "default": "mdi:water-percent"
+      },
+      "ams_temperature": {
+        "default": "mdi:thermometer"
+      },
+      "ams_drying_remaining": {
+        "default": "mdi:heat-wave"
+      },
+      "ams_tray": {
+        "default": "mdi:circle-double",
+        "state": {
+          "empty": "mdi:circle-outline"
+        }
+      },
+      "external_spool": {
+        "default": "mdi:circle-double",
+        "state": {
+          "empty": "mdi:circle-outline"
+        }
+      },
+      "external_spool_n": {
+        "default": "mdi:circle-double",
+        "state": {
+          "empty": "mdi:circle-outline"
+        }
+      }
+    },
+    "binary_sensor": {
+      "printing": {
+        "default": "mdi:printer-3d",
+        "state": {
+          "on": "mdi:printer-3d-nozzle"
+        }
+      },
+      "awaiting_plate_clear": {
+        "default": "mdi:check-circle-outline",
+        "state": {
+          "on": "mdi:broom"
+        }
+      },
+      "sdcard": {
+        "default": "mdi:sd"
+      },
+      "timelapse": {
+        "default": "mdi:video-off-outline",
+        "state": {
+          "on": "mdi:timelapse"
+        }
+      }
+    },
+    "button": {
+      "pause": {
+        "default": "mdi:pause"
+      },
+      "resume": {
+        "default": "mdi:play"
+      },
+      "stop": {
+        "default": "mdi:stop"
+      },
+      "clear_plate": {
+        "default": "mdi:broom"
+      }
+    },
+    "light": {
+      "chamber_light": {
+        "default": "mdi:lightbulb",
+        "state": {
+          "off": "mdi:lightbulb-off"
+        }
+      }
+    },
+    "select": {
+      "print_speed": {
+        "default": "mdi:speedometer",
+        "state": {
+          "silent": "mdi:speedometer-slow",
+          "standard": "mdi:speedometer-medium",
+          "sport": "mdi:speedometer",
+          "ludicrous": "mdi:rocket-launch"
+        }
+      }
+    }
+  }
+}
