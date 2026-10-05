@@ -12,7 +12,9 @@ Sie zeigt dir in Home Assistant:
 
 ## Symbol
 
-Ab Home Assistant 2026.3 zeigt die Integration ihr Bambuddy-Symbol in der Integrationsliste. In älteren Versionen erscheint stattdessen ein Platzhalter. Das Symbol ist das Logo des Projekts [Bambuddy](https://github.com/maziggy/bambuddy) von maziggy.
+<img src="custom_components/bambuddy/brand/icon.png" alt="Icon" width="64">
+
+Ab Home Assistant 2026.3 zeigt die Integration ihr eigenes Symbol in der Integrationsliste. In älteren Versionen erscheint stattdessen ein Platzhalter. Die Vorlage liegt als SVG in `docs/icon.svg`.
 
 ## Voraussetzungen
 
@@ -113,7 +115,7 @@ Jeder Eintrag in `jobs` enthält: `id`, `name`, `status`, `printer` (bei nicht z
 
 ## Update
 
-HACS meldet neue Versionen automatisch unter **Einstellungen** → **Updates**. Nach dem Update Home Assistant neu starten.
+Jede neue Version erscheint als Release auf GitHub. HACS prüft regelmäßig darauf und meldet sie unter **Einstellungen** → **Updates**. Sofort prüfen: HACS → **Bambuddy** → oben rechts **⋮** → **Informationen aktualisieren**. Nach dem Update Home Assistant neu starten.
 
 ## Dashboard-Karte
 
@@ -179,3 +181,7 @@ content: >
 pip install -r requirements_test.txt
 python -m pytest
 ```
+
+## Lizenz
+
+MIT, siehe [LICENSE](LICENSE). Diese Integration ist ein Community-Projekt und gehört nicht zum Bambuddy-Projekt oder zu Bambu Lab.

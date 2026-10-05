@@ -1,0 +1,41 @@
+name: Release
+
+# Creates a GitHub release whenever the version in manifest.json changes on
+# main. HACS only offers updates for new releases, so this is what makes
+# "Update available" show up in Home Assistant.
+
+on:
+  push:
+    branches: [main]
+    paths: [custom_components/bambuddy/manifest.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: echo "tag=v$(jq -r .version custom_components/bambuddy/manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Create release if it does not exist yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, nothing to do."
+            exit 0
+          fi
+          # Changes since the previous release become the release notes.
+          previous=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          range=${previous:+$previous..HEAD}
+          git log --no-merges --format='- %s' $range > notes.md
+          gh release create "$TAG" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"

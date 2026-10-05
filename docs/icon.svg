@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="16 16 480 480">
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#00AE42"/>
+  <!-- hotend -->
+  <rect x="176" y="72" width="160" height="96" rx="18" fill="#fff"/>
+  <path d="M208 168h96l-30 54h-36z" fill="#fff"/>
+  <!-- extruded line turning into queue lines -->
+  <path d="M256 222v40c0 18 14 30 32 30h120" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+  <rect x="104" y="332" width="304" height="28" rx="14" fill="#fff" opacity=".85"/>
+  <rect x="104" y="392" width="224" height="28" rx="14" fill="#fff" opacity=".6"/>
+</svg>
