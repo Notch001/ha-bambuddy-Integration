@@ -3,6 +3,13 @@
 The section of a version becomes its GitHub release notes, which Home Assistant
 shows under **Settings → Updates** when the update is offered.
 
+## 0.15.0
+
+- Printer card: new option **Layout → Vertical (ring on top)**: big ring above, all values
+  centred below. Ring and text grow with the card; all rings in a row stay the same size.
+- Printer card: fills the full height when the card has a fixed number of rows.
+- Printer card: the percentage and icons inside the ring scale with the ring.
+
 ## 0.14.1
 
 - Printer card: a third of a section by default, so three printers fit side by side.

@@ -7,7 +7,7 @@
  * One printer, compact (kitchen dashboards): type: custom:bambuddy-printer-card
  */
 
-const CARD_VERSION = "0.14.1";
+const CARD_VERSION = "0.15.0";
 
 const TEXT = {
   de: {
@@ -74,6 +74,9 @@ const TEXT = {
     pc_ring_filament: "Filamentfarbe",
     pc_ring_state: "Statusfarbe",
     pc_left: "noch",
+    pc_layout: "Ausrichtung",
+    pc_layout_auto: "Automatisch",
+    pc_layout_vertical: "Vertikal (Ring oben)",
     pc_until: "fertig um",
     printing_n: "drucken",
     waiting_n: "wartend",
@@ -150,6 +153,9 @@ const TEXT = {
     pc_ring_filament: "Filament colour",
     pc_ring_state: "State colour",
     pc_left: "",
+    pc_layout: "Layout",
+    pc_layout_auto: "Automatic",
+    pc_layout_vertical: "Vertical (ring on top)",
     pc_until: "done at",
     printing_n: "printing",
     waiting_n: "waiting",
@@ -1189,7 +1195,7 @@ const WALL_STYLE = `
 
 // ---- Printer card: one printer, big progress ring, print name, filament ----
 
-const PRINTER_DEFAULTS = { show_time: false, show_cover: false, ring_color: "filament" };
+const PRINTER_DEFAULTS = { layout: "auto", show_time: false, show_cover: false, ring_color: "filament" };
 
 // Relative luminance of "#rrggbb" (0 = black, 1 = white), null if not a colour.
 function luminance(hex) {
@@ -1216,6 +1222,19 @@ class BambuddyPrinterCard extends HTMLElement {
     return {
       schema: [
         { name: "printer", required: true, selector: { device: { filter: { integration: "bambuddy", manufacturer: "Bambu Lab" } } } },
+        {
+          name: "layout",
+          default: PRINTER_DEFAULTS.layout,
+          selector: {
+            select: {
+              mode: "box",
+              options: [
+                { value: "auto", label: t.pc_layout_auto },
+                { value: "vertical", label: t.pc_layout_vertical },
+              ],
+            },
+          },
+        },
         {
           name: "ring_color",
           default: PRINTER_DEFAULTS.ring_color,
@@ -1368,7 +1387,7 @@ class BambuddyPrinterCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `<style>${PRINTER_STYLE}</style>
       <ha-card class="${printing ? "printing" : ""}" style="--accent:${stateColor}">
-        <div class="pc">
+        <div class="pc${this._config.layout === "vertical" ? " vertical" : ""}">
           ${ring}
           <div class="info">
             <div class="top"><span class="name">${esc(this._printer.name)}</span>
@@ -1383,10 +1402,11 @@ class BambuddyPrinterCard extends HTMLElement {
 }
 
 const PRINTER_STYLE = `
-  :host { display: block; }
+  /* Fill the height the dashboard gives the card (e.g. a fixed number of rows). */
+  :host { display: block; height: 100%; }
   ha-card { display: block; padding: 16px; height: 100%; box-sizing: border-box; container-type: inline-size; overflow: hidden; }
   .pc { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
-  .ring { position: relative; width: clamp(104px, 34cqw, 150px); aspect-ratio: 1; }
+  .ring { position: relative; width: clamp(104px, 34cqw, 150px); aspect-ratio: 1; container-type: inline-size; flex: none; }
   .ring svg { width: 100%; height: 100%; display: block; }
   .ring circle { fill: none; stroke-width: 10; }
   .ring .track { stroke: color-mix(in srgb, var(--primary-text-color) 9%, transparent); }
@@ -1394,9 +1414,9 @@ const PRINTER_STYLE = `
   .ring .outline { stroke: color-mix(in srgb, var(--primary-text-color) 28%, transparent); stroke-width: 13; stroke-linecap: round; }
   .ring .cover { position: absolute; inset: 24%; width: 52%; height: 52%; object-fit: contain; opacity: 0.14; border-radius: 50%; }
   .center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-  .center ha-icon { --mdc-icon-size: 44px; color: var(--secondary-text-color); }
-  .center .done ha-icon { --mdc-icon-size: 52px; color: inherit; }
-  .pct { font-size: clamp(28px, 10cqw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--primary-text-color); }
+  .center ha-icon { --mdc-icon-size: 32cqw; color: var(--secondary-text-color); }
+  .center .done ha-icon { --mdc-icon-size: 40cqw; color: inherit; }
+  .pct { font-size: 27cqw; font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--primary-text-color); }
   .pct small { font-size: 0.45em; font-weight: 500; margin-left: 1px; color: var(--secondary-text-color); }
   .info { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
   .top { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -1419,6 +1439,21 @@ const PRINTER_STYLE = `
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-text-color) 22%, transparent); vertical-align: middle; }
   .spool.unknown { --spool: var(--disabled-text-color, #bbb); }
   .pick { display: flex; align-items: center; gap: 10px; color: var(--secondary-text-color); }
+  /* Vertical: ring on top, everything else centred below; grows with the card. */
+  .pc.vertical { display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    text-align: center; height: 100%; gap: 12px; }
+  .pc.vertical .ring { width: auto; height: min(58cqw, 240px); min-height: 72px; flex: 0 1 auto; }
+  /* Same room for the text on every card, so rings in a row are equally big. */
+  .pc.vertical .info { align-items: center; justify-content: flex-start; width: 100%; gap: 6px; min-height: 8.6em; flex: none; }
+  /* Only the ring gives way when the card is short; text never gets clipped. */
+  .pc.vertical .info > * { flex: none; }
+  .pc.vertical .top { justify-content: center; }
+  .pc.vertical .name { flex: 0 1 auto; }
+  .pc.vertical .job { font-size: clamp(1.15em, 6.5cqw, 1.8em); -webkit-line-clamp: 1; max-width: 100%; }
+  .pc.vertical .name { font-size: clamp(0.8em, 3.4cqw, 0.95em); }
+  .pc.vertical .time { font-size: clamp(0.9em, 4.2cqw, 1.2em); }
+  .pc.vertical .filament { font-size: clamp(0.95em, 4.4cqw, 1.25em); }
+  .pc.vertical .filament, .pc.vertical .time { justify-content: center; }
   @container (max-width: 300px) {
     .pc { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 12px; }
     .ring { width: min(70cqw, 170px); }
@@ -1427,15 +1462,16 @@ const PRINTER_STYLE = `
     .name { flex: 0 1 auto; }
     .filament, .time { justify-content: center; }
   }
+  @container (max-width: 300px) {
+    .pc.vertical .job { -webkit-line-clamp: 2; }
+    .pc.vertical .info { min-height: 0; }
+  }
   /* Very narrow (three cards in a one-column section): only what matters. */
   @container (max-width: 200px) {
     ha-card { padding: 12px 10px; }
     .pc { gap: 8px; }
     .ring { width: min(78cqw, 130px); }
     .ring circle { stroke-width: 11; }
-    .pct { font-size: clamp(22px, 17cqw, 30px); }
-    .center ha-icon { --mdc-icon-size: 34px; }
-    .center .done ha-icon { --mdc-icon-size: 40px; }
     .info { gap: 4px; }
     .top { flex-direction: column; gap: 2px; }
     .name { font-size: 0.68em; letter-spacing: 0.04em; max-width: 100%; }
@@ -1447,6 +1483,7 @@ const PRINTER_STYLE = `
     .filament { font-size: 0.78em; gap: 5px; max-width: 100%; }
     .filament .label { display: none; }
     .spool { width: 14px; height: 14px; }
+    .pc.vertical .ring { height: min(78cqw, 130px); }
   }
 `;
 

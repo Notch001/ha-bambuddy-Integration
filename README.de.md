@@ -115,6 +115,7 @@ Eine zweite, schlichte Karte für Küche oder Flur: ein Drucker, ein großer For
 ```yaml
 type: custom:bambuddy-printer-card
 printer: <Geräte-ID>     # wird im Editor ausgewählt
+layout: auto             # auto | vertical (Ring oben, Werte darunter)
 ring_color: filament     # filament | state
 show_time: false         # Restzeit und Ende anzeigen
 show_cover: false        # Vorschaubild dezent im Ring
@@ -122,6 +123,7 @@ show_cover: false        # Vorschaubild dezent im Ring
 
 - Während des Drucks hat der Ring die Farbe des laufenden Filaments (Weiß und Schwarz bekommen einen Rand, damit sie sichtbar bleiben).
 - Fertig: voller Ring mit Haken und dem Namen des fertigen Drucks. Bereit: die geladenen Spulen als Farbpunkte.
+- **Vertikal** (`layout: vertical`): Ring oben, alle Werte zentriert darunter; Ring und Schrift wachsen mit der Karte, und alle Karten einer Reihe behalten die gleiche Ringgröße. Ideal für Wand-Tablets mit breiten Karten fester Höhe.
 - **Breite:** standardmäßig ein Drittel eines Abschnitts, sodass drei Drucker nebeneinander passen. Pro Karte im Editor im Tab **Layout** änderbar. Die Karte passt sich jeder Breite an: schmal untereinander, sehr schmal noch kompakter (ohne Status-Chip und Symbole).
 
 ## Zeitplan und Filament-Check

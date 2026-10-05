@@ -119,6 +119,7 @@ A second, simple card for kitchen or hallway dashboards: one printer, a big prog
 ```yaml
 type: custom:bambuddy-printer-card
 printer: <device id>     # chosen in the editor
+layout: auto             # auto | vertical (ring on top, values below)
 ring_color: filament     # filament | state
 show_time: false         # remaining time and end time
 show_cover: false        # print preview faintly inside the ring
@@ -126,6 +127,7 @@ show_cover: false        # print preview faintly inside the ring
 
 - While printing, the ring has the colour of the filament in use (white and black get an outline so they stay visible).
 - Finished: full ring with a tick and the name of the finished print. Idle: the loaded spools as colour dots.
+- **Vertical** (`layout: vertical`): the ring on top, all values centred below; ring and text grow with the card, and every card in a row keeps the same ring size. Good for wall tablets with wide, fixed-height cards.
 - **Width:** by default a third of a section, so three printers fit side by side. Change it per card in the editor's **Layout** tab. The card adapts to any width: stacked when narrow, even more compact when very narrow (chip and icons hidden).
 
 ## Schedule and filament check
