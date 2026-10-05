@@ -110,8 +110,15 @@ class BambuddyApiClient:
         except BambuddyError:
             raise
         except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+            # aiohttp puts the full URL, query and all, into its messages;
+            # camera requests carry a token there, so keep it out of the logs.
+            detail = (
+                f"HTTP {err.status}"
+                if isinstance(err, aiohttp.ClientResponseError)
+                else str(err) or type(err).__name__
+            )
             raise BambuddyConnectionError(
-                f"Error talking to Bambuddy at {url}: {err}"
+                f"Error talking to Bambuddy at {url}: {detail}"
             ) from err
 
     async def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:

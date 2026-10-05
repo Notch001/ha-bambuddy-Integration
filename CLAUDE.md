@@ -7,6 +7,9 @@
   in `frontend/bambuddy-card.js`) for every change users should receive; the
   Release workflow publishes a GitHub release from it, which is what HACS offers
   as an update.
+- Add a `## <version>` section to `CHANGELOG.md` for every version bump; the
+  Release workflow uses it as the release notes shown in Home Assistant's
+  update dialog.
 - Keep `translations/en.json`, `translations/de.json` and `strings.json` in sync.
 - Run `python -m pytest` before pushing; CI runs hassfest, the HACS action and the tests.
 - `docs/card.png` is rendered from sample data; refresh it when the card's look changes.

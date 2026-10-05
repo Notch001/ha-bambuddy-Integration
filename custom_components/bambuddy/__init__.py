@@ -114,11 +114,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> 
     await coordinator.stats.async_refresh()
     entry.runtime_data = coordinator
 
-    # Printers hang off the Bambuddy device (via_device), so it must exist
+    # Printers hang off the Bambuddy device (via_device_id), so it must exist
     # before any platform registers a printer.
-    dr.async_get(hass).async_get_or_create(
+    coordinator.hub_device_id = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id, **hub_device_info(coordinator)
-    )
+    ).id
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
@@ -128,6 +128,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> 
 async def async_unload_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> None:
+    """Drop the card resource with the last Bambuddy entry, so no dead resource stays behind."""
+    if any(
+        other.entry_id != entry.entry_id
+        for other in hass.config_entries.async_entries(DOMAIN)
+    ):
+        return
+    lovelace = hass.data.get("lovelace")
+    resources = getattr(lovelace, "resources", None)
+    if resources is None or getattr(lovelace, "resource_mode", "storage") != "storage":
+        return
+    try:
+        if not getattr(resources, "loaded", True):
+            await resources.async_load()
+            resources.loaded = True
+        for item in list(resources.async_items()):
+            if item.get("url", "").split("?")[0] == CARD_URL:
+                await resources.async_delete_item(item["id"])
+    except Exception:  # noqa: BLE001 - cleanup is best effort
+        _LOGGER.debug("Could not remove the Bambuddy card resource", exc_info=True)
 
 
 async def _async_reload_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> None:

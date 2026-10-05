@@ -68,6 +68,8 @@ class BambuddyCoordinator(DataUpdateCoordinator[BambuddyData]):
         self.client = client
         # Set in async_setup_entry; the hub's statistics sensors read it.
         self.stats: BambuddyStatsCoordinator | None = None
+        # Registry id of the "Bambuddy" device the printers are linked to.
+        self.hub_device_id: str | None = None
         self._colors: dict[str, Any] = {}
         self._colors_fetched = 0.0
 

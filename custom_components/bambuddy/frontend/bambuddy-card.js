@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.11.1";
+const CARD_VERSION = "0.12.0";
 
 const TEXT = {
   de: {

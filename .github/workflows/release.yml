@@ -34,8 +34,13 @@ jobs:
             echo "Release $TAG already exists, nothing to do."
             exit 0
           fi
-          # Changes since the previous release become the release notes.
-          previous=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          range=${previous:+$previous..HEAD}
-          git log --no-merges --format='- %s' $range > notes.md
+          # The version's section in CHANGELOG.md becomes the release notes
+          # (Home Assistant shows them in the update dialog); without one,
+          # fall back to the commits since the previous release.
+          awk -v v="## ${TAG#v}" '$0 == v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            previous=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            range=${previous:+$previous..HEAD}
+            git log --no-merges --format='- %s' $range > notes.md
+          fi
           gh release create "$TAG" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"

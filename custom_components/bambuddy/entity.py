@@ -130,6 +130,18 @@ def jobs_attribute(
     return [job_summary(item, data) for item in items[:MAX_JOBS_IN_ATTRIBUTES]]
 
 
+# Home Assistant 2026.8 links child devices by the parent's registry id
+# (via_device_id) and deprecates the identifier tuple (via_device), which
+# stops working in 2027.8. Older versions only know via_device.
+_HAS_VIA_DEVICE_ID = "via_device_id" in DeviceInfo.__annotations__
+
+
+def _via_hub(coordinator: BambuddyCoordinator) -> dict[str, Any]:
+    if _HAS_VIA_DEVICE_ID and coordinator.hub_device_id:
+        return {"via_device_id": coordinator.hub_device_id}
+    return {"via_device": (DOMAIN, coordinator.config_entry.entry_id)}
+
+
 def hub_device_info(coordinator: BambuddyCoordinator) -> DeviceInfo:
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
@@ -168,8 +180,8 @@ class BambuddyPrinterEntity(CoordinatorEntity[BambuddyCoordinator]):
             manufacturer="Bambu Lab",
             model=printer.get("model"),
             serial_number=serial,
-            via_device=(DOMAIN, coordinator.config_entry.entry_id),
             configuration_url=coordinator.client.base_url,
+            **_via_hub(coordinator),
         )
 
     @property

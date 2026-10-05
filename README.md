@@ -198,17 +198,21 @@ Each `jobs` entry has `id`, `name`, `status`, `printer`, `printer_id`, `position
 
 ## Updates
 
-Every new version is published as a GitHub release. HACS shows it under **Settings** → **Updates** (check right away: HACS → **Bambuddy** → **⋮** → **Update information**). Restart Home Assistant after updating.
+Every new version is published as a GitHub release. HACS shows it under **Settings** → **Updates** (check right away: HACS → **Bambuddy** → **⋮** → **Update information**). The update dialog shows what changed (from [`CHANGELOG.md`](CHANGELOG.md)). Restart Home Assistant after updating.
 
 ## Troubleshooting
 
 **The card is missing from the card picker, shows a spinner there, or says "Custom element doesn't exist" in edit mode.** Update to 0.11.1 or newer and reload the page. (Older versions loaded the card too early, before Home Assistant had set up its frontend.)
 
-**The card shows "Configuration error" / "Custom element doesn't exist" (often only on the phone). Reload the page. In the companion app: **Settings** → **Companion app** → **Debugging** → **Reset frontend cache**. The card is registered under **Settings** → **Dashboards** → **⋮** → **Resources**.
+**The card shows "Configuration error" / "Custom element doesn't exist" (often only on the phone).** Reload the page. In the companion app: **Settings** → **Companion app** → **Debugging** → **Reset frontend cache**. The card is registered under **Settings** → **Dashboards** → **⋮** → **Resources**.
 
 **A button or action shows a permission error.** The API key lacks "Control Printer" or "Manage Queue". Edit the key in Bambuddy.
 
 **Statistics stay unavailable.** Your Bambuddy version may not offer statistics yet; everything else works regardless.
+
+**No icon in the HACS store.** HACS still loads icons only from the central brands server, which no longer accepts custom integrations. Home Assistant itself (2026.3 and newer) shows the icon under **Devices & services**, because it ships with the integration.
+
+**Reporting a bug:** please attach the diagnostics file: **Settings** → **Devices & services** → **Bambuddy** → **⋮** → **Download diagnostics**. API key, URL, serial numbers and notify targets are removed from it.
 
 **Debug logs:** **Settings** → **Devices & services** → **Bambuddy** → **Enable debug logging**.
 

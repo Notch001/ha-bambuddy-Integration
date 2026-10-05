@@ -64,3 +64,9 @@ async def test_card_registered_as_dashboard_resource(hass: HomeAssistant, aiocli
     await _async_register_card_resource(hass, "/bambuddy/bambuddy-card.js?v=9.9.9")
     urls = [item["url"] for item in resources.async_items()]
     assert [u for u in urls if u.startswith("/bambuddy/")] == ["/bambuddy/bambuddy-card.js?v=9.9.9"]
+
+    # Removing the last Bambuddy entry takes the resource with it.
+    entry = hass.config_entries.async_entries("bambuddy")[0]
+    assert await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    assert not [item for item in resources.async_items() if item["url"].startswith("/bambuddy/")]

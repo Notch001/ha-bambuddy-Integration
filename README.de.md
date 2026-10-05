@@ -194,7 +194,7 @@ Jeder Eintrag in `jobs` enthält `id`, `name`, `status`, `printer`, `printer_id`
 
 ## Updates
 
-Jede neue Version erscheint als Release auf GitHub. HACS meldet sie unter **Einstellungen** → **Updates** (sofort prüfen: HACS → **Bambuddy** → **⋮** → **Informationen aktualisieren**). Danach Home Assistant neu starten.
+Jede neue Version erscheint als Release auf GitHub. HACS meldet sie unter **Einstellungen** → **Updates** (sofort prüfen: HACS → **Bambuddy** → **⋮** → **Informationen aktualisieren**). Der Update-Dialog zeigt, was sich geändert hat (aus [`CHANGELOG.md`](CHANGELOG.md)). Danach Home Assistant neu starten.
 
 ## Fehlerbehebung
 
@@ -205,6 +205,10 @@ Jede neue Version erscheint als Release auf GitHub. HACS meldet sie unter **Eins
 **Ein Knopf oder eine Aktion meldet fehlende Rechte.** Dem API-Schlüssel fehlt „Drucker steuern“ oder „Warteschlange verwalten“. Schlüssel in Bambuddy bearbeiten.
 
 **Die Statistik bleibt „nicht verfügbar“.** Deine Bambuddy-Version bietet noch keine Statistik; alles andere funktioniert trotzdem.
+
+**Kein Icon im HACS-Store.** HACS lädt Icons bisher nur vom zentralen Brands-Server, und der nimmt keine Custom-Integrationen mehr auf. Home Assistant selbst (ab 2026.3) zeigt das Icon unter **Geräte & Dienste**, weil es mit der Integration mitkommt.
+
+**Fehler melden:** Bitte die Diagnosedatei anhängen: **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → **⋮** → **Diagnosedaten herunterladen**. API-Schlüssel, URL, Seriennummern und Benachrichtigungsziele sind daraus entfernt.
 
 **Debug-Protokoll:** **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → **Debug-Protokollierung aktivieren**.
 
