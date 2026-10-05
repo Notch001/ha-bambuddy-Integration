@@ -1,10 +1,13 @@
-pytest-homeassistant-custom-component
-PyTurboJPEG
-# for the notification blueprint test (mobile_app)
-hassil
-home-assistant-intents
-mutagen
-ha-ffmpeg
-pymicro-vad
-pyspeex-noise
-PyNaCl
+# Pinned to the Home Assistant version the tests were written against
+# (pytest-homeassistant-custom-component 0.13.316 = Home Assistant 2026.2.3).
+pytest-homeassistant-custom-component==0.13.316
+PyTurboJPEG==2.5.0
+# mobile_app (notification blueprint test) and the conversation stack it pulls in,
+# at the versions Home Assistant 2026.2 pins
+hassil==3.5.0
+home-assistant-intents==2026.1.28
+mutagen==1.48.1
+ha-ffmpeg==3.2.2
+pymicro-vad==2.1.0
+pyspeex-noise==2.0.1
+PyNaCl==1.6.2
