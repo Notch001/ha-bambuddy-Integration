@@ -57,7 +57,9 @@ async def test_options_flow(hass: HomeAssistant, aioclient_mock) -> None:
     entry = result["result"]
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_SCAN_INTERVAL: 60})
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SCAN_INTERVAL: 60, "enable_costs": False, "notify_targets": []}
+    )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     assert entry.runtime_data.update_interval.total_seconds() == 60

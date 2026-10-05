@@ -23,6 +23,19 @@ Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/
 
 <img src="docs/card.png" alt="Bambuddy card (sample data)" width="640">
 
+## Where do I find what?
+
+| What | Where |
+|---|---|
+| **Everything at a glance, the detail window, notify when done** | the **Bambuddy card** on your dashboard; tap a printer's name (ⓘ) to open its detail window |
+| Card options (layout, schedule, filament check, sections) | dashboard → edit → the card → its editor |
+| Polling interval, **cost sensors**, **notification targets** | **Settings** → **Devices & services** → **Bambuddy** → **Configure** |
+| Queue, "print farm done at", statistics, costs | **Settings** → **Devices & services** → **Bambuddy** → device **Bambuddy** |
+| Per printer: "Free from", "In use", "Print event", "Notify when done", AMS slots … | same place → the printer's device |
+| The queue as a list (reorder, delete) | sidebar → **To-do lists** → "Print queue" |
+| Notifications with "Cleared" button, automatic power | import the [blueprints](#notifications-and-automatic-power-blueprints), then **Settings** → **Automations & scenes** → **Blueprints** |
+| Actions (print again, skip, …) | **Developer tools** → **Actions**, search "Bambuddy" |
+
 ## Requirements
 
 - Home Assistant 2025.3 or newer (2026.3+ shows the integration icon)
@@ -61,7 +74,7 @@ Copy `custom_components/bambuddy` from this repository to `/config/custom_compon
 1. **Settings** → **Devices & services** → **Add integration** → **Bambuddy**.
 2. Enter the **Bambuddy URL** (the address you open Bambuddy with, e.g. `http://192.168.1.50:8000`) and the **API key** (empty if Bambuddy has no login).
 
-You get one device "Bambuddy" (queue, schedule, statistics) and one device per printer. Printers, AMS units and spools added later appear automatically. Under **Configure** you can change the polling interval (default 30 s) and switch on the **cost sensors**.
+You get one device "Bambuddy" (queue, schedule, statistics) and one device per printer. Printers, AMS units and spools added later appear automatically. Under **Configure** you can change the polling interval (default 30 s), switch on the **cost sensors** and choose **notification targets** (e.g. `mobile_app_your_phone`) for "Notify when done".
 
 ## Dashboard card
 
@@ -84,6 +97,10 @@ collapse_queue: false        # start with the job lists collapsed
 queue_limit: 5               # max. jobs per list
 ```
 
+- The card always uses the full width of its section. For the full page width: edit the section (pencil) and set its width to the full page.
+<img src="docs/dialog.png" alt="Detail window (sample data)" width="520">
+
+- **Detail window:** tap a printer's name (ⓘ) – or a tile in wall mode – for its current print with end time, **Notify when done**, "free from", and every planned job with estimated start and end.
 - Each printer is a tile with a coloured top edge for its state; tiles sit side by side on wide screens.
 - Job lists and the schedule collapse when you tap their header; the browser remembers it.
 - Waiting jobs show their filament colours and the estimated start ("approx. 14:30").
@@ -149,6 +166,7 @@ The queue actions need "Manage Queue". In the to-do list "Print queue" you can d
 | Errors | number of HMS messages; details in `errors` |
 | Online, Printing, Error, Clear build plate | binary sensors |
 | In use | on while printing, a job is waiting for it, or it is still hot – off means it can be switched off |
+| Notify when done | switch: on = the next finished or failed print sends a notification to the targets from **Configure** (or appears in Home Assistant's notifications), then it switches itself off |
 | Print event | fires `print_started`, `print_finished`, `print_failed`, `plate_clear_required`, `error` (attributes `job`, `next_job`) |
 | Nozzle | diameter; type in `nozzles` |
 | Print preview, Camera | image of the current print; snapshot and live stream |

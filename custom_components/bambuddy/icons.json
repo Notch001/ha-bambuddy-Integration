@@ -226,6 +226,14 @@
       "print_event": {
         "default": "mdi:bell-ring-outline"
       }
+    },
+    "switch": {
+      "notify_when_done": {
+        "default": "mdi:bell-outline",
+        "state": {
+          "on": "mdi:bell-ring"
+        }
+      }
     }
   },
   "services": {

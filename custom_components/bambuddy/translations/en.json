@@ -38,10 +38,12 @@
         "title": "Bambuddy options",
         "data": {
           "scan_interval": "Polling interval (seconds)",
-          "enable_costs": "Create cost sensors (filament, energy)"
+          "enable_costs": "Create cost sensors (filament, energy)",
+          "notify_targets": "Notification targets"
         },
         "data_description": {
-          "enable_costs": "Filament and energy costs from Bambuddy. Energy needs smart plugs set up in Bambuddy."
+          "enable_costs": "Filament and energy costs from Bambuddy. Energy needs smart plugs set up in Bambuddy.",
+          "notify_targets": "Where \"Notify when done\" sends to, e.g. mobile_app_your_phone. Empty = notification inside Home Assistant."
         }
       }
     }
@@ -292,6 +294,11 @@
             }
           }
         }
+      }
+    },
+    "switch": {
+      "notify_when_done": {
+        "name": "Notify when done"
       }
     }
   },

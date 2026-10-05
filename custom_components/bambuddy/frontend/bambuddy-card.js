@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.10.0";
 
 const TEXT = {
   de: {
@@ -41,6 +41,20 @@ const TEXT = {
     queue_limit: "Max. Aufträge je Liste",
     up_next: "Als Nächstes",
     timeline: "Zeitplan",
+    details: "Details",
+    done_at: "Fertig um",
+    in_time: "in",
+    notify_done: "Benachrichtigen, wenn fertig",
+    notify_to: "an",
+    notify_ha: "als Hinweis in Home Assistant",
+    notify_hint: "Ziele festlegen: Einstellungen → Geräte & Dienste → Bambuddy → Konfigurieren",
+    free_from: "Frei ab",
+    free_now: "Jetzt frei",
+    plan: "Geplant",
+    predicted: "voraussichtlich auf diesem Drucker",
+    nothing_planned: "Nichts geplant",
+    all_entities: "Alle Werte",
+    close: "Schließen",
     all_done: "Alles fertig",
     all_free: "Alle Drucker frei",
     now: "Jetzt",
@@ -91,6 +105,20 @@ const TEXT = {
     queue_limit: "Max. jobs per list",
     up_next: "Up next",
     timeline: "Schedule",
+    details: "Details",
+    done_at: "Done at",
+    in_time: "in",
+    notify_done: "Notify when done",
+    notify_to: "to",
+    notify_ha: "as a notification in Home Assistant",
+    notify_hint: "Choose targets: Settings → Devices & services → Bambuddy → Configure",
+    free_from: "Free from",
+    free_now: "Free now",
+    plan: "Planned",
+    predicted: "expected on this printer",
+    nothing_planned: "Nothing planned",
+    all_entities: "All values",
+    close: "Close",
     all_done: "All done",
     all_free: "All printers free",
     now: "Now",
@@ -250,13 +278,15 @@ class BambuddyCard extends HTMLElement {
   }
 
   getGridOptions() {
-    return { columns: 12, min_columns: 6 };
+    // "full" = the whole section, however many page columns it spans.
+    return { columns: "full", min_columns: 6 };
   }
 
   connectedCallback() {
     if (!this.shadowRoot) {
       this.attachShadow({ mode: "open" });
       this.shadowRoot.addEventListener("click", (ev) => this._onClick(ev));
+
     }
     if (this._hass) this._update();
     // The wall layout shows a clock and the timeline moves with time.
@@ -322,6 +352,10 @@ class BambuddyCard extends HTMLElement {
   disconnectedCallback() {
     clearInterval(this._clock);
     this._clock = null;
+    this._dialog = null;
+    this._dialogHost?.remove();
+    this._dialogHost = null;
+    if (this._onKey) document.removeEventListener("keydown", this._onKey);
   }
 
   _fmt(stateObj) {
@@ -336,6 +370,7 @@ class BambuddyCard extends HTMLElement {
     if (!this._printers) return;
     if (this._config.layout === "wall") {
       this.shadowRoot.innerHTML = `<style>${STYLE}${WALL_STYLE}</style><ha-card class="wall">${this._renderWall(t)}</ha-card>`;
+      this._renderDialogHost(t);
       return;
     }
     const timeline = this._config.show_timeline ? this._renderTimeline(t) : "";
@@ -345,6 +380,7 @@ class BambuddyCard extends HTMLElement {
     const queue = this._config.show_queue && this._hub ? this._renderQueue(t) : "";
     const title = this._config.title ? `<h1 class="card-title">${esc(this._config.title)}</h1>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>${title}${body}${timeline}${queue}</ha-card>`;
+    this._renderDialogHost(t);
   }
 
   _renderPrinter(p, t) {
@@ -356,7 +392,7 @@ class BambuddyCard extends HTMLElement {
     let html = `<section class="printer" style="--accent:${color}">
       <div class="head">
         <ha-icon icon="mdi:printer-3d"></ha-icon>
-        <span class="name" data-more="${esc(p.one["sensor.printer_state"])}">${esc(p.name)}</span>
+        <span class="name" data-dialog="${esc(p.id)}" title="${esc(t.details)}">${esc(p.name)}<ha-icon class="info" icon="mdi:information-outline"></ha-icon></span>
         <span class="chip" style="--chip:${color}" data-more="${esc(p.one["sensor.printer_state"])}">${esc(this._fmt(stateObj))}</span>
       </div>`;
 
@@ -709,7 +745,7 @@ class BambuddyCard extends HTMLElement {
             next.filament_ok === false ? `${next.filament_missing.join(", ")} ${t.filament_missing}` : t.filament_short,
           )}</div>`
         : "";
-    return `<div class="w-tile" style="--accent:${color}" data-more="${esc(p.one["sensor.printer_state"])}">
+    return `<div class="w-tile" style="--accent:${color}" data-dialog="${esc(p.id)}">
       <div class="w-head"><span class="w-name">${esc(p.name)}</span><span class="chip" style="--chip:${color}">${esc(this._fmt(stateObj))}</span></div>
       ${this._ring(printing ? progress : 0, color, inner)}
       <div class="w-job">${printing && job && !["unknown", "unavailable"].includes(job) ? esc(job) : "&nbsp;"}</div>
@@ -748,15 +784,135 @@ class BambuddyCard extends HTMLElement {
       <div class="w-grid">${tiles || `<div class="empty pad">${esc(t.no_printers)}</div>`}</div>${timeline}${queue}`;
   }
 
+  // The detail window lives directly under <body>: dashboard containers can
+  // clip or offset position:fixed content inside the card.
+  _renderDialogHost(t) {
+    const html = this._renderDialog(t);
+    if (!html) {
+      this._dialogHost?.remove();
+      this._dialogHost = null;
+      return;
+    }
+    if (!this._dialogHost) {
+      this._dialogHost = document.createElement("bambuddy-card-dialog");
+      const root = this._dialogHost.attachShadow({ mode: "open" });
+      root.addEventListener("click", (ev) => this._onClick(ev));
+      document.addEventListener("keydown", (this._onKey ||= (ev) => {
+        if (ev.key === "Escape" && this._dialog) {
+          this._dialog = null;
+          this._render();
+        }
+      }));
+      document.body.appendChild(this._dialogHost);
+    }
+    this._dialogHost.shadowRoot.innerHTML = `<style>${STYLE}${DIALOG_STYLE}</style>${html}`;
+  }
+
+  _renderDialog(t) {
+    const p = this._dialog && this._printers.find((x) => x.id === this._dialog);
+    if (!p) return "";
+    const stateObj = this._state(p, "sensor.printer_state");
+    const state = stateObj?.state || "unavailable";
+    const color = STATE_COLORS[state] || "var(--secondary-text-color)";
+    const printing = PRINTING_STATES.has(state);
+    const progress = num(this._state(p, "sensor.progress")) ?? 0;
+    const remaining = num(this._state(p, "sensor.remaining_time"));
+    const end = this._state(p, "sensor.end_time")?.state;
+    const job = this._state(p, "sensor.current_print")?.state;
+    const freeAt = this._state(p, "sensor.free_at");
+    const schedule = freeAt?.attributes?.schedule || [];
+    const jobs = Object.fromEntries((this._state(p, "sensor.printer_queue")?.attributes?.jobs || []).map((j) => [j.id, j]));
+    const pending = (this._state(this._hub, "sensor.queue_pending")?.attributes?.jobs || []);
+    for (const j of pending) jobs[j.id] ||= j;
+
+    const notifyId = p.one["switch.notify_when_done"];
+    const notify = notifyId ? this._hass.states[notifyId] : null;
+    const targets = notify?.attributes?.targets || [];
+    const notifyRow = notify
+      ? `<div class="d-notify">
+          <ha-icon icon="${notify.state === "on" ? "mdi:bell-ring" : "mdi:bell-outline"}"></ha-icon>
+          <div class="d-notify-text"><div>${esc(t.notify_done)}</div>
+            <small>${esc(targets.length ? `${t.notify_to} ${targets.join(", ")}` : t.notify_ha)}</small>
+            ${targets.length ? "" : `<small class="hint">${esc(t.notify_hint)}</small>`}</div>
+          <button class="switch ${notify.state === "on" ? "on" : ""}" data-switch="${esc(notifyId)}" role="switch"
+            aria-checked="${notify.state === "on"}"><span></span></button>
+        </div>`
+      : "";
+
+    const current = printing
+      ? `<div class="d-current">
+          <div class="d-job">${esc(job && !["unknown", "unavailable"].includes(job) ? job : "")}</div>
+          <div class="bar"><div style="width:${Math.min(100, Math.max(0, progress))}%;background:${color}"></div></div>
+          <div class="d-big"><span>${Math.round(progress)} %</span>
+            <span>${esc(t.done_at)} <b>${esc(this._time(end))}</b>${remaining != null ? ` · ${esc(t.in_time)} ${esc(formatMinutes(remaining))}` : ""}</span></div>
+        </div>`
+      : "";
+
+    const freeText =
+      freeAt && !["unknown", "unavailable"].includes(freeAt.state)
+        ? `${t.free_from} <b>${esc(this._time(freeAt.state, true))}</b>`
+        : `<b>${esc(t.free_now)}</b>`;
+    const planned = schedule.filter((e) => !e.running);
+    const rows = planned.length
+      ? planned
+          .map((e, i) => {
+            const j = jobs[e.id] || {};
+            const warn =
+              j.filament_ok === false
+                ? `<div class="job-warn"><ha-icon icon="mdi:alert"></ha-icon>${esc(`${j.filament_missing.join(", ")} ${t.filament_missing}`)}</div>`
+                : j.filament_short
+                  ? `<div class="job-warn"><ha-icon icon="mdi:alert"></ha-icon>${esc(t.filament_short)}</div>`
+                  : "";
+            return `<li><span class="d-when">${esc(this._time(e.start))}${e.end ? `<br><small>– ${esc(this._time(e.end))}</small>` : ""}</span>
+              <span class="d-what"><b>${i + 1}. ${esc(e.name || "?")}</b>${colorDots(j.filament_colors)}
+                <small>${esc([j.print_time_minutes ? formatMinutes(j.print_time_minutes) : null, j.filament_type, e.predicted ? t.predicted : null].filter(Boolean).join(" · "))}</small>${warn}</span></li>`;
+          })
+          .join("")
+      : `<li class="empty">${esc(t.nothing_planned)}</li>`;
+
+    return `<div class="d-backdrop" data-close="1">
+      <div class="d-box" role="dialog" aria-label="${esc(p.name)}" style="--accent:${color}">
+        <div class="d-head"><span class="d-title">${esc(p.name)}</span>
+          <span class="chip" style="--chip:${color}">${esc(this._fmt(stateObj))}</span>
+          <button class="icon" data-close="1" aria-label="${esc(t.close)}"><ha-icon icon="mdi:close"></ha-icon></button></div>
+        ${current}
+        ${notifyRow}
+        <div class="d-free"><ha-icon icon="mdi:clock-check-outline"></ha-icon><span>${freeText}</span></div>
+        <div class="d-sub">${esc(t.plan)}</div>
+        <ol class="d-plan">${rows}</ol>
+        <div class="d-actions"><button data-device="${esc(p.id)}"><ha-icon icon="mdi:format-list-bulleted"></ha-icon>${esc(t.all_entities)}</button></div>
+      </div></div>`;
+  }
+
   // ---- interaction ------------------------------------------------------
 
   _onClick(ev) {
     const el = ev
       .composedPath()
-      .find((n) => n.dataset && (n.dataset.collapse || n.dataset.press || n.dataset.toggle || n.dataset.more));
+      .find(
+        (n) =>
+          n.dataset &&
+          (n.dataset.close || n.dataset.dialog || n.dataset.switch || n.dataset.device ||
+            n.dataset.collapse || n.dataset.press || n.dataset.toggle || n.dataset.more),
+      );
     if (!el) return;
     const t = TEXT[lang()];
-    if (el.dataset.collapse) {
+    if (el.dataset.close) {
+      // Only the backdrop itself or the close button, not clicks inside the box.
+      if (el.classList.contains("d-backdrop") && ev.target !== el) return;
+      this._dialog = null;
+      this._render();
+    } else if (el.dataset.dialog) {
+      this._dialog = el.dataset.dialog;
+      this._render();
+    } else if (el.dataset.switch) {
+      this._call("switch", "toggle", el.dataset.switch);
+    } else if (el.dataset.device) {
+      this._dialog = null;
+      this._render();
+      history.pushState(null, "", `/config/devices/device/${el.dataset.device}`);
+      window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+    } else if (el.dataset.collapse) {
       this._toggleCollapsed(el.dataset.collapse);
     } else if (el.dataset.press) {
       if (el.dataset.confirm && !window.confirm(t.confirm_stop)) return;
@@ -882,6 +1038,49 @@ const STYLE = `
   .seg.predicted { background: repeating-linear-gradient(135deg, var(--primary-color) 0 6px, color-mix(in srgb, var(--primary-color) 75%, #fff) 6px 12px); }
   .seg.open { -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent); mask-image: linear-gradient(90deg, #000 70%, transparent); }
   .tl-free { position: absolute; left: 8px; line-height: 22px; font-size: 0.75em; color: var(--secondary-text-color); }
+`;
+
+const DIALOG_STYLE = `
+  :host { font-family: var(--ha-font-family-body, Roboto, sans-serif); }
+  .name ha-icon.info { --mdc-icon-size: 16px; margin-left: 4px; color: var(--secondary-text-color); vertical-align: -2px; }
+  [data-dialog] { cursor: pointer; }
+  .d-backdrop { position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center;
+                justify-content: center; padding: 16px; box-sizing: border-box; }
+  .d-box { width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; padding: 18px 20px;
+           border-radius: var(--ha-card-border-radius, 16px); border-top: 6px solid var(--accent);
+           background: var(--card-background-color, var(--primary-background-color, #fff)); color: var(--primary-text-color);
+           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); font-family: var(--ha-font-family-body, inherit); cursor: default; }
+  .d-head { display: flex; align-items: center; gap: 10px; }
+  .d-title { flex: 1; font-size: 1.3em; font-weight: 500; }
+  button.icon { border: none; padding: 4px; border-radius: 50%; }
+  .d-current { margin-top: 14px; }
+  .d-job { font-weight: 500; }
+  .d-big { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--secondary-text-color); }
+  .d-big span:first-child { font-size: 1.4em; color: var(--primary-text-color); font-weight: 500; }
+  .d-big b { color: var(--primary-text-color); }
+  .d-notify { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px; border-radius: 12px;
+              background: var(--secondary-background-color); }
+  .d-notify > ha-icon { color: var(--warning-color, #ffa000); }
+  .d-notify-text { flex: 1; min-width: 0; }
+  .d-notify-text small { display: block; color: var(--secondary-text-color); }
+  .d-notify-text small.hint { font-style: italic; }
+  button.switch { position: relative; width: 44px; height: 24px; padding: 0; border-radius: 12px; border: none;
+                  background: var(--disabled-color, #bdbdbd); flex: none; }
+  button.switch span { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff;
+                       transition: left 0.2s; }
+  button.switch.on { background: var(--primary-color); }
+  button.switch.on span { left: 23px; }
+  .d-free { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+  .d-free ha-icon { color: var(--secondary-text-color); }
+  .d-sub { margin-top: 16px; font-size: 0.85em; font-weight: 500; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 0.04em; }
+  .d-plan { list-style: none; margin: 6px 0 0; padding: 0; }
+  .d-plan li { display: flex; gap: 12px; padding: 8px 0; }
+  .d-plan li + li { border-top: 1px solid var(--divider-color); }
+  .d-when { width: 64px; flex: none; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .d-when small { color: var(--secondary-text-color); font-weight: 400; }
+  .d-what { flex: 1; min-width: 0; }
+  .d-what small { display: block; color: var(--secondary-text-color); }
+  .d-actions { margin-top: 16px; display: flex; justify-content: flex-end; }
 `;
 
 const WALL_STYLE = `

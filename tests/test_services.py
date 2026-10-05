@@ -141,3 +141,54 @@ async def test_print_event_fires(hass: HomeAssistant, aioclient_mock) -> None:
     assert state.attributes["event_type"] == "plate_clear_required"  # the last of the two events
     assert state.attributes["job"] == "Benchy"
     assert state.attributes["next_job"] == "Halterung"
+
+
+async def test_notify_when_done(hass: HomeAssistant, aioclient_mock) -> None:
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.bambuddy.const import CONF_NOTIFY_TARGETS
+
+    from .conftest import STATUS
+
+    sent = []
+    hass.services.async_register("notify", "mobile_app_phone", lambda call: sent.append(dict(call.data)))
+    mock_bambuddy(aioclient_mock)
+    entry = await _setup(hass)
+    hass.config_entries.async_update_entry(entry, options={CONF_NOTIFY_TARGETS: ["mobile_app_phone"]})
+    await hass.async_block_till_done()
+    entry = hass.config_entries.async_get_entry(entry.entry_id)
+
+    switch = er.async_get(hass).async_get_entity_id("switch", DOMAIN, f"{X1}_notify_when_done")
+    assert hass.states.get(switch).attributes["targets"] == ["mobile_app_phone"]
+    await hass.services.async_call("switch", "turn_on", {ATTR_ENTITY_ID: switch}, blocking=True)
+    assert hass.states.get(switch).state == "on"
+
+    finished = {**STATUS, 1: {**STATUS[1], "state": "FINISH"}}
+    mock_bambuddy(aioclient_mock, status=finished)
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert sent == [{"title": "X1C Werkstatt is done", "message": "Benchy has finished. Up next: Halterung"}]
+    assert hass.states.get(switch).state == "off"  # one-shot
+
+
+async def test_notify_when_done_without_targets(hass: HomeAssistant, aioclient_mock) -> None:
+    from homeassistant.helpers import entity_registry as er
+
+    from .conftest import STATUS
+
+    mock_bambuddy(aioclient_mock)
+    entry = await _setup(hass)
+    switch = er.async_get(hass).async_get_entity_id("switch", DOMAIN, f"{X1}_notify_when_done")
+    await hass.services.async_call("switch", "turn_on", {ATTR_ENTITY_ID: switch}, blocking=True)
+
+    failed = {**STATUS, 1: {**STATUS[1], "state": "FAILED"}}
+    mock_bambuddy(aioclient_mock, status=failed)
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    from homeassistant.components import persistent_notification
+
+    current = persistent_notification._async_get_or_create_notifications(hass)
+    assert "bambuddy_done_1" in current
+    assert current["bambuddy_done_1"]["title"] == "X1C Werkstatt: print failed"

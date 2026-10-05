@@ -19,6 +19,19 @@ Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/mazig
 
 <img src="docs/card.png" alt="Bambuddy-Karte (Beispieldaten)" width="640">
 
+## Wo finde ich was?
+
+| Was | Wo |
+|---|---|
+| **Alles auf einen Blick, Detailfenster, „Benachrichtigen, wenn fertig“** | die **Bambuddy-Karte** auf dem Dashboard; Tipp auf den Druckernamen (ⓘ) öffnet das Detailfenster |
+| Kartenoptionen (Darstellung, Zeitplan, Filament-Check, Bereiche) | Dashboard → Bearbeiten → Karte → Karteneditor |
+| Abfrageintervall, **Kosten-Sensoren**, **Benachrichtigungsziele** | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → **Konfigurieren** |
+| Warteschlange, „Druckfarm fertig um“, Statistik, Kosten | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy** |
+| Pro Drucker: „Frei ab“, „In Benutzung“, „Druckereignis“, „Benachrichtigen, wenn fertig“, AMS-Slots … | ebenda → Gerät des Druckers |
+| Die Warteschlange als Liste (sortieren, löschen) | Seitenleiste → **To-do-Listen** → „Druck-Warteschlange“ |
+| Benachrichtigungen mit „Geräumt“, automatisches Ein/Aus | [Blueprints](#benachrichtigungen-und-automatisches-ein-ausschalten-blueprints) importieren, dann **Einstellungen** → **Automationen & Szenen** → **Blueprints** |
+| Aktionen (nochmal drucken, überspringen …) | **Entwicklerwerkzeuge** → **Aktionen**, nach „Bambuddy“ suchen |
+
 ## Voraussetzungen
 
 - Home Assistant 2025.3 oder neuer (ab 2026.3 mit Integrations-Icon)
@@ -57,7 +70,7 @@ Den Ordner `custom_components/bambuddy` nach `/config/custom_components/bambuddy
 1. **Einstellungen** → **Geräte & Dienste** → **Integration hinzufügen** → **Bambuddy**.
 2. **Bambuddy-Adresse** (wie im Browser, z. B. `http://192.168.1.50:8000`) und **API-Schlüssel** eintragen (leer, wenn Bambuddy keine Anmeldung nutzt).
 
-Es entstehen ein Gerät „Bambuddy“ (Warteschlange, Zeitplan, Statistik) und ein Gerät pro Drucker. Später hinzugefügte Drucker, AMS-Einheiten und Spulen erscheinen automatisch. Unter **Konfigurieren** lassen sich das Abfrageintervall (Standard 30 s) ändern und die **Kosten-Sensoren** einschalten.
+Es entstehen ein Gerät „Bambuddy“ (Warteschlange, Zeitplan, Statistik) und ein Gerät pro Drucker. Später hinzugefügte Drucker, AMS-Einheiten und Spulen erscheinen automatisch. Unter **Konfigurieren** lassen sich das Abfrageintervall (Standard 30 s) ändern, die **Kosten-Sensoren** einschalten und **Benachrichtigungsziele** (z. B. `mobile_app_dein_handy`) für „Benachrichtigen, wenn fertig“ wählen.
 
 ## Dashboard-Karte
 
@@ -80,6 +93,10 @@ collapse_queue: false        # Listen anfangs eingeklappt
 queue_limit: 5               # max. Aufträge je Liste
 ```
 
+- Die Karte nutzt immer die volle Breite ihres Abschnitts. Für die volle Seitenbreite: Abschnitt bearbeiten (Stift) und die Breite auf die ganze Seite stellen.
+<img src="docs/dialog.png" alt="Detailfenster (Beispieldaten)" width="520">
+
+- **Detailfenster:** Tipp auf den Druckernamen (ⓘ) – im Wandmodus auf die Kachel – zeigt den laufenden Druck mit Endzeit, **Benachrichtigen, wenn fertig**, „Frei ab“ und alle geplanten Aufträge mit voraussichtlichem Start und Ende.
 - Jeder Drucker ist eine Kachel mit farbigem oberem Rand für den Status; auf breiten Bildschirmen nebeneinander.
 - Auftragslisten und Zeitplan klappen per Tipp auf die Überschrift ein; der Browser merkt sich das.
 - Wartende Aufträge zeigen ihre Filamentfarben und den voraussichtlichen Start („ca. 14:30“).
@@ -145,6 +162,7 @@ Die Warteschlangen-Aktionen brauchen „Warteschlange verwalten“. In der To-do
 | Fehlermeldungen | Anzahl der HMS-Meldungen; Details in `errors` |
 | Online, Druckt, Fehler, Druckplatte räumen | An/Aus-Sensoren |
 | In Benutzung | an, solange er druckt, ein Auftrag auf ihn wartet oder er noch heiß ist – aus heißt: darf ausgeschaltet werden |
+| Benachrichtigen, wenn fertig | Schalter: an = der nächste fertige oder fehlgeschlagene Druck schickt eine Nachricht an die Ziele aus **Konfigurieren** (oder erscheint in den Home-Assistant-Benachrichtigungen), danach schaltet er sich selbst aus |
 | Druckereignis | löst `print_started`, `print_finished`, `print_failed`, `plate_clear_required`, `error` aus (Attribute `job`, `next_job`) |
 | Düse | Durchmesser; Typ in `nozzles` |
 | Druckvorschau, Kamera | Bild des laufenden Drucks; Kamerabild und Livestream |

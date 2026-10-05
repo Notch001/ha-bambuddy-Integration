@@ -12,6 +12,11 @@ from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFl
 from homeassistant.const import CONF_URL, CONF_VERIFY_SSL
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .api import (
     BambuddyApiClient,
@@ -22,6 +27,7 @@ from .api import (
 from .const import (
     CONF_API_KEY,
     CONF_ENABLE_COSTS,
+    CONF_NOTIFY_TARGETS,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -150,6 +156,19 @@ class BambuddyOptionsFlow(OptionsFlow):
                     vol.Required(
                         CONF_ENABLE_COSTS, default=options.get(CONF_ENABLE_COSTS, False)
                     ): bool,
+                    vol.Optional(
+                        CONF_NOTIFY_TARGETS, default=options.get(CONF_NOTIFY_TARGETS, [])
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=sorted(
+                                set(self.hass.services.async_services_for_domain("notify"))
+                                - {"send_message"}
+                                | set(options.get(CONF_NOTIFY_TARGETS, []))
+                            ),
+                            multiple=True,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                 }
             ),
         )
