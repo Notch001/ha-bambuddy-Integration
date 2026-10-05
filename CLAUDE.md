@@ -10,3 +10,11 @@
 - Keep `translations/en.json`, `translations/de.json` and `strings.json` in sync.
 - Run `python -m pytest` before pushing; CI runs hassfest, the HACS action and the tests.
 - `docs/card.png` is rendered from sample data; refresh it when the card's look changes.
+- Never push when the test run is red; the Release workflow publishes on every
+  manifest version bump, so a red push ships a release.
+- Load the card only via the dashboard resource. Home Assistant swaps in a
+  scoped `window.customElements` while its app starts; anything defined before
+  that (e.g. via `add_extra_js_url`) is invisible to the card picker and edit
+  mode. `registerCard()` in the card re-registers as a safety net. To verify
+  frontend behaviour, run a real HA with `home-assistant-frontend` and drive it
+  with Playwright – mock pages don't show registry problems.
