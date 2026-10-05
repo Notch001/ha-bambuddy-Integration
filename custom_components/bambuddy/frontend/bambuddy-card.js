@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.10.0";
+const CARD_VERSION = "0.11.0";
 
 const TEXT = {
   de: {
@@ -392,8 +392,9 @@ class BambuddyCard extends HTMLElement {
     let html = `<section class="printer" style="--accent:${color}">
       <div class="head">
         <ha-icon icon="mdi:printer-3d"></ha-icon>
-        <span class="name" data-dialog="${esc(p.id)}" title="${esc(t.details)}">${esc(p.name)}<ha-icon class="info" icon="mdi:information-outline"></ha-icon></span>
+        <span class="name" data-dialog="${esc(p.id)}" title="${esc(t.details)}">${esc(p.name)}</span>
         <span class="chip" style="--chip:${color}" data-more="${esc(p.one["sensor.printer_state"])}">${esc(this._fmt(stateObj))}</span>
+        <button class="gear" data-dialog="${esc(p.id)}" title="${esc(t.details)}" aria-label="${esc(t.details)}"><ha-icon icon="mdi:cog"></ha-icon></button>
       </div>`;
 
     if (printing) html += this._renderJob(p, t);
@@ -746,7 +747,8 @@ class BambuddyCard extends HTMLElement {
           )}</div>`
         : "";
     return `<div class="w-tile" style="--accent:${color}" data-dialog="${esc(p.id)}">
-      <div class="w-head"><span class="w-name">${esc(p.name)}</span><span class="chip" style="--chip:${color}">${esc(this._fmt(stateObj))}</span></div>
+      <div class="w-head"><span class="w-name">${esc(p.name)}</span><span class="chip" style="--chip:${color}">${esc(this._fmt(stateObj))}</span>
+        <button class="gear" data-dialog="${esc(p.id)}" aria-label="${esc(t.details)}"><ha-icon icon="mdi:cog"></ha-icon></button></div>
       ${this._ring(printing ? progress : 0, color, inner)}
       <div class="w-job">${printing && job && !["unknown", "unavailable"].includes(job) ? esc(job) : "&nbsp;"}</div>
       <div class="w-time">${printing && remaining != null ? `${esc(formatMinutes(remaining))} · ${esc(this._time(end))}` : "&nbsp;"}</div>
@@ -1037,6 +1039,10 @@ const STYLE = `
   .seg.running { background: var(--seg); }
   .seg.predicted { background: repeating-linear-gradient(135deg, var(--primary-color) 0 6px, color-mix(in srgb, var(--primary-color) 75%, #fff) 6px 12px); }
   .seg.open { -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent); mask-image: linear-gradient(90deg, #000 70%, transparent); }
+  button.gear { border: none; padding: 6px; margin: -6px -6px -6px 0; border-radius: 50%; line-height: 0; flex: none;
+                color: var(--secondary-text-color); background: transparent; }
+  button.gear:hover { background: var(--secondary-background-color); color: var(--primary-text-color); }
+  button.gear ha-icon { --mdc-icon-size: 22px; margin: 0; }
   .tl-free { position: absolute; left: 8px; line-height: 22px; font-size: 0.75em; color: var(--secondary-text-color); }
 `;
 

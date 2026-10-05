@@ -27,7 +27,7 @@ Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/
 
 | What | Where |
 |---|---|
-| **Everything at a glance, the detail window, notify when done** | the **Bambuddy card** on your dashboard; tap a printer's name (ⓘ) to open its detail window |
+| **Everything at a glance, the detail window, notify when done** | the **Bambuddy card** on your dashboard; tap the ⚙ gear (or the printer's name) to open its detail window |
 | Card options (layout, schedule, filament check, sections) | dashboard → edit → the card → its editor |
 | Polling interval, **cost sensors**, **notification targets** | **Settings** → **Devices & services** → **Bambuddy** → **Configure** |
 | Queue, "print farm done at", statistics, costs | **Settings** → **Devices & services** → **Bambuddy** → device **Bambuddy** |
@@ -100,7 +100,7 @@ queue_limit: 5               # max. jobs per list
 - The card always uses the full width of its section. For the full page width: edit the section (pencil) and set its width to the full page.
 <img src="docs/dialog.png" alt="Detail window (sample data)" width="520">
 
-- **Detail window:** tap a printer's name (ⓘ) – or a tile in wall mode – for its current print with end time, **Notify when done**, "free from", and every planned job with estimated start and end.
+- **Detail window:** tap the ⚙ gear next to a printer's state (or its name, or a tile in wall mode) for its current print with end time, **Notify when done**, "free from", and every planned job with estimated start and end.
 - Each printer is a tile with a coloured top edge for its state; tiles sit side by side on wide screens.
 - Job lists and the schedule collapse when you tap their header; the browser remembers it.
 - Waiting jobs show their filament colours and the estimated start ("approx. 14:30").

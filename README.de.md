@@ -23,7 +23,7 @@ Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/mazig
 
 | Was | Wo |
 |---|---|
-| **Alles auf einen Blick, Detailfenster, „Benachrichtigen, wenn fertig“** | die **Bambuddy-Karte** auf dem Dashboard; Tipp auf den Druckernamen (ⓘ) öffnet das Detailfenster |
+| **Alles auf einen Blick, Detailfenster, „Benachrichtigen, wenn fertig“** | die **Bambuddy-Karte** auf dem Dashboard; Tipp auf das ⚙ Zahnrad (oder den Druckernamen) öffnet das Detailfenster |
 | Kartenoptionen (Darstellung, Zeitplan, Filament-Check, Bereiche) | Dashboard → Bearbeiten → Karte → Karteneditor |
 | Abfrageintervall, **Kosten-Sensoren**, **Benachrichtigungsziele** | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → **Konfigurieren** |
 | Warteschlange, „Druckfarm fertig um“, Statistik, Kosten | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy** |
@@ -96,7 +96,7 @@ queue_limit: 5               # max. Aufträge je Liste
 - Die Karte nutzt immer die volle Breite ihres Abschnitts. Für die volle Seitenbreite: Abschnitt bearbeiten (Stift) und die Breite auf die ganze Seite stellen.
 <img src="docs/dialog.png" alt="Detailfenster (Beispieldaten)" width="520">
 
-- **Detailfenster:** Tipp auf den Druckernamen (ⓘ) – im Wandmodus auf die Kachel – zeigt den laufenden Druck mit Endzeit, **Benachrichtigen, wenn fertig**, „Frei ab“ und alle geplanten Aufträge mit voraussichtlichem Start und Ende.
+- **Detailfenster:** Tipp auf das ⚙ Zahnrad neben dem Status (oder auf den Druckernamen, im Wandmodus auf die Kachel) zeigt den laufenden Druck mit Endzeit, **Benachrichtigen, wenn fertig**, „Frei ab“ und alle geplanten Aufträge mit voraussichtlichem Start und Ende.
 - Jeder Drucker ist eine Kachel mit farbigem oberem Rand für den Status; auf breiten Bildschirmen nebeneinander.
 - Auftragslisten und Zeitplan klappen per Tipp auf die Überschrift ein; der Browser merkt sich das.
 - Wartende Aufträge zeigen ihre Filamentfarben und den voraussichtlichen Start („ca. 14:30“).
