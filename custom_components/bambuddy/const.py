@@ -21,6 +21,9 @@ COLOR_MAP_REFRESH: Final = timedelta(hours=1)
 STATS_INTERVAL: Final = timedelta(minutes=10)
 CONF_ENABLE_COSTS: Final = "enable_costs"
 CONF_NOTIFY_TARGETS: Final = "notify_targets"
+# Warn when an AMS spool has this many percent left or less (0 = never).
+CONF_LOW_SPOOL: Final = "low_spool_threshold"
+DEFAULT_LOW_SPOOL: Final = 10
 
 # Bambu print speed levels as Bambuddy reports and accepts them.
 SPEED_LEVELS: Final = {1: "silent", 2: "standard", 3: "sport", 4: "ludicrous"}

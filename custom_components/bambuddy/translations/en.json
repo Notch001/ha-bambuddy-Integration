@@ -39,11 +39,13 @@
         "data": {
           "scan_interval": "Polling interval (seconds)",
           "enable_costs": "Create cost sensors (filament, energy)",
+          "low_spool_threshold": "Warn at spool level (%)",
           "notify_targets": "Notification targets"
         },
         "data_description": {
           "enable_costs": "Filament and energy costs from Bambuddy. Energy needs smart plugs set up in Bambuddy.",
-          "notify_targets": "Where \"Notify when done\" sends to, e.g. mobile_app_your_phone. Empty = notification inside Home Assistant."
+          "notify_targets": "Where \"Notify when done\" sends to, e.g. mobile_app_your_phone. Empty = notification inside Home Assistant.",
+          "low_spool_threshold": "\"Filament low\" turns on when an AMS spool has this much left or less. 0 = off. Spools whose level the AMS can't measure are ignored."
         }
       }
     }
@@ -221,6 +223,9 @@
       },
       "awaiting_plate_clear": {
         "name": "Clear build plate"
+      },
+      "filament_low": {
+        "name": "Filament low"
       },
       "door": {
         "name": "Door"

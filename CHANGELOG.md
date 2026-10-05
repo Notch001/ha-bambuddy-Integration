@@ -3,6 +3,14 @@
 The section of a version becomes its GitHub release notes, which Home Assistant
 shows under **Settings → Updates** when the update is offered.
 
+## 0.13.0
+
+- **Spool warning:** new binary sensor "Filament low" per printer. It turns on when an AMS
+  spool has 10 % or less left. Change the level (or 0 = off) under
+  *Settings → Devices & services → Bambuddy → Configure*.
+- Card: hint "Spool running low" on the printer and the slot's percentage in orange.
+- Use it in automations, e.g. to get a message on your phone.
+
 ## 0.12.0
 
 - **Diagnostics:** *Settings → Devices & services → Bambuddy → ⋮ → Download diagnostics*

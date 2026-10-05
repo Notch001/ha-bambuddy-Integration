@@ -16,9 +16,10 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from .const import CONF_LOW_SPOOL, DEFAULT_LOW_SPOOL
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator
 from .entity import BambuddyPrinterEntity, add_entities_when_seen
-from .planner import in_use
+from .planner import in_use, low_spools
 
 PARALLEL_UPDATES = 0
 
@@ -29,6 +30,15 @@ class BambuddyBinarySensorDescription(BinarySensorEntityDescription):
     # Reads the whole snapshot instead of the printer status; still works
     # while the printer is switched off (no status).
     data_fn: Callable[[BambuddyBinarySensor], bool] | None = None
+    attrs_fn: Callable[[BambuddyBinarySensor], dict[str, Any]] | None = None
+
+
+def _low_spool_threshold(entity: BambuddyBinarySensor) -> int:
+    return int(entity.coordinator.config_entry.options.get(CONF_LOW_SPOOL, DEFAULT_LOW_SPOOL))
+
+
+def _low_spools(entity: BambuddyBinarySensor) -> list[dict[str, Any]]:
+    return low_spools(entity.status, _low_spool_threshold(entity))
 
 
 BINARY_SENSORS: tuple[BambuddyBinarySensorDescription, ...] = (
@@ -61,6 +71,14 @@ BINARY_SENSORS: tuple[BambuddyBinarySensorDescription, ...] = (
         key="awaiting_plate_clear",
         translation_key="awaiting_plate_clear",
         value_fn=lambda s: bool(s.get("awaiting_plate_clear")),
+    ),
+    BambuddyBinarySensorDescription(
+        key="filament_low",
+        translation_key="filament_low",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda s: False,
+        data_fn=lambda e: bool(_low_spools(e)),
+        attrs_fn=lambda e: {"spools": _low_spools(e), "threshold": _low_spool_threshold(e)},
     ),
     BambuddyBinarySensorDescription(
         key="door",
@@ -131,3 +149,9 @@ class BambuddyBinarySensor(BambuddyPrinterEntity, BinarySensorEntity):
         if status is None:
             return False if self.entity_description.key == "online" else None
         return self.entity_description.value_fn(status)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self.entity_description.attrs_fn:
+            return self.entity_description.attrs_fn(self)
+        return None

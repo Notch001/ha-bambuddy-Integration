@@ -27,8 +27,10 @@ from .api import (
 from .const import (
     CONF_API_KEY,
     CONF_ENABLE_COSTS,
+    CONF_LOW_SPOOL,
     CONF_NOTIFY_TARGETS,
     CONF_SCAN_INTERVAL,
+    DEFAULT_LOW_SPOOL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MAX_SCAN_INTERVAL,
@@ -156,6 +158,9 @@ class BambuddyOptionsFlow(OptionsFlow):
                     vol.Required(
                         CONF_ENABLE_COSTS, default=options.get(CONF_ENABLE_COSTS, False)
                     ): bool,
+                    vol.Required(
+                        CONF_LOW_SPOOL, default=options.get(CONF_LOW_SPOOL, DEFAULT_LOW_SPOOL)
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
                     vol.Optional(
                         CONF_NOTIFY_TARGETS, default=options.get(CONF_NOTIFY_TARGETS, [])
                     ): SelectSelector(

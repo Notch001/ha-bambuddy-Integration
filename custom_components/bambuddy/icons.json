@@ -182,6 +182,12 @@
         "state": {
           "on": "mdi:power-plug"
         }
+      },
+      "filament_low": {
+        "default": "mdi:printer-3d-nozzle-outline",
+        "state": {
+          "on": "mdi:printer-3d-nozzle-alert"
+        }
       }
     },
     "button": {

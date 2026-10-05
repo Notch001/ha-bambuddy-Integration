@@ -176,3 +176,43 @@ def in_use(
         return True
     temps = st.get("temperatures") or {}
     return (temps.get("nozzle") or 0) >= COOL_NOZZLE_C or (temps.get("bed") or 0) >= COOL_BED_C
+
+
+def ams_label(unit: dict[str, Any]) -> str:
+    """'1', '2', ... for regular AMS units, 'HT 1' for AMS HT (ids from 128)."""
+    if unit.get("is_ams_ht") or unit["id"] >= 128:
+        return f"HT {unit['id'] - 127}"
+    return str(unit["id"] + 1)
+
+
+def low_spools(status: dict[str, Any] | None, threshold: int) -> list[dict[str, Any]]:
+    """AMS spools with at most `threshold` percent left.
+
+    Only the AMS knows how much is left, and only for spools it can measure:
+    -1 means unknown (e.g. third-party spools without estimate) and is
+    skipped, as are empty slots and the external holder.
+    """
+    if threshold <= 0:
+        return []
+    low = []
+    for unit in (status or {}).get("ams") or []:
+        for tray in unit.get("tray") or []:
+            remain = tray.get("remain")
+            if (
+                tray.get("exists") is False
+                or tray.get("state") == 9
+                or not tray.get("tray_type")
+                or not isinstance(remain, int)
+                or not 0 <= remain <= threshold
+            ):
+                continue
+            low.append(
+                {
+                    "ams": ams_label(unit),
+                    "slot": tray["id"] + 1,
+                    "type": tray.get("tray_type"),
+                    "name": tray.get("tray_sub_brands") or tray.get("tray_type"),
+                    "remaining": remain,
+                }
+            )
+    return low

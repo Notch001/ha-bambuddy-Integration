@@ -45,6 +45,7 @@ from .entity import (
     job_name,
     jobs_attribute,
 )
+from .planner import ams_label
 
 PARALLEL_UPDATES = 0
 
@@ -410,13 +411,6 @@ async def async_setup_entry(
     add_entities_when_seen(entry, async_add_entities, candidates)
 
 
-def _ams_label(unit: dict[str, Any]) -> str:
-    """'1', '2', ... for regular AMS units, 'HT 1' for AMS HT (ids from 128)."""
-    if unit.get("is_ams_ht") or unit["id"] >= 128:
-        return f"HT {unit['id'] - 127}"
-    return str(unit["id"] + 1)
-
-
 def _find_unit(status: dict[str, Any] | None, ams_id: int) -> dict[str, Any] | None:
     for unit in (status or {}).get("ams") or []:
         if unit.get("id") == ams_id:
@@ -491,7 +485,7 @@ class BambuddyAmsSensor(BambuddyPrinterEntity, SensorEntity):
         self.ams_id = ams_id
         self.entity_description = description
         unit = _find_unit(self.status, ams_id) or {"id": ams_id}
-        self._attr_translation_placeholders = {"unit": _ams_label(unit)}
+        self._attr_translation_placeholders = {"unit": ams_label(unit)}
 
     @property
     def unit(self) -> dict[str, Any] | None:
@@ -525,7 +519,7 @@ class BambuddySpoolSensor(BambuddyPrinterEntity, SensorEntity):
             key = f"ams{ams_id}_tray{tray_id}"
             unit = _find_unit(coordinator.data.status.get(printer_id), ams_id) or {"id": ams_id}
             self._attr_translation_key = "ams_tray"
-            placeholders = {"unit": _ams_label(unit), "slot": str(tray_id + 1)}
+            placeholders = {"unit": ams_label(unit), "slot": str(tray_id + 1)}
         super().__init__(coordinator, printer_id, key)
         self._attr_translation_placeholders = placeholders
         self.ams_id = ams_id

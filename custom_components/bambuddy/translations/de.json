@@ -39,11 +39,13 @@
         "data": {
           "scan_interval": "Abfrageintervall (Sekunden)",
           "enable_costs": "Kosten-Sensoren anlegen (Filament, Energie)",
+          "low_spool_threshold": "Warnen ab Spulenfüllstand (%)",
           "notify_targets": "Benachrichtigungsziele"
         },
         "data_description": {
           "enable_costs": "Filament- und Energiekosten aus Bambuddy. Energie braucht in Bambuddy eingerichtete Steckdosen.",
-          "notify_targets": "Wohin „Benachrichtigen, wenn fertig“ schickt, z. B. mobile_app_dein_handy. Leer = Hinweis in Home Assistant."
+          "notify_targets": "Wohin „Benachrichtigen, wenn fertig“ schickt, z. B. mobile_app_dein_handy. Leer = Hinweis in Home Assistant.",
+          "low_spool_threshold": "„Filament fast leer“ geht an, wenn eine AMS-Spule nur noch so viel oder weniger hat. 0 = aus. Spulen, deren Füllstand das AMS nicht messen kann, werden ignoriert."
         }
       }
     }
@@ -221,6 +223,9 @@
       },
       "awaiting_plate_clear": {
         "name": "Druckplatte räumen"
+      },
+      "filament_low": {
+        "name": "Filament fast leer"
       },
       "door": {
         "name": "Tür"

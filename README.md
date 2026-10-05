@@ -14,7 +14,7 @@ Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/
 - **Print queue:** waiting and running jobs per printer and overall, as a to-do list you can **reorder and clean up** right in Home Assistant.
 - **Schedule:** estimated start and end of every queued job, "free from" per printer and "print farm done at".
 - **Filament check** *(optional)*: warns when a queued job needs a filament that isn't loaded on its printer.
-- **AMS and filament:** per slot the filament with colour name (e.g. "PLA Basic · Jade White") and remaining amount, AMS humidity and temperature.
+- **AMS and filament:** per slot the filament with colour name (e.g. "PLA Basic · Jade White") and remaining amount, AMS humidity and temperature, and a **warning when a spool runs low** (threshold adjustable).
 - **Camera, controls:** live camera; pause, resume, stop, chamber light, print speed, "build plate cleared".
 - **Actions:** move a job to the front, skip it, print something again or print a library file – from automations, scripts or voice assistants.
 - **Statistics:** prints, success rate, print time and filament from Bambuddy; **costs** *(optional)* for filament and energy.
@@ -29,7 +29,7 @@ Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/
 |---|---|
 | **Everything at a glance, the detail window, notify when done** | the **Bambuddy card** on your dashboard; tap the ⚙ gear (or the printer's name) to open its detail window |
 | Card options (layout, schedule, filament check, sections) | dashboard → edit → the card → its editor |
-| Polling interval, **cost sensors**, **notification targets** | **Settings** → **Devices & services** → **Bambuddy** → **Configure** |
+| Polling interval, **cost sensors**, **spool warning level**, **notification targets** | **Settings** → **Devices & services** → **Bambuddy** → **Configure** |
 | Queue, "print farm done at", statistics, costs | **Settings** → **Devices & services** → **Bambuddy** → device **Bambuddy** |
 | Per printer: "Free from", "In use", "Print event", "Notify when done", AMS slots … | same place → the printer's device |
 | The queue as a list (reorder, delete) | sidebar → **To-do lists** → "Print queue" |
@@ -74,7 +74,7 @@ Copy `custom_components/bambuddy` from this repository to `/config/custom_compon
 1. **Settings** → **Devices & services** → **Add integration** → **Bambuddy**.
 2. Enter the **Bambuddy URL** (the address you open Bambuddy with, e.g. `http://192.168.1.50:8000`) and the **API key** (empty if Bambuddy has no login).
 
-You get one device "Bambuddy" (queue, schedule, statistics) and one device per printer. Printers, AMS units and spools added later appear automatically. Under **Configure** you can change the polling interval (default 30 s), switch on the **cost sensors** and choose **notification targets** (e.g. `mobile_app_your_phone`) for "Notify when done".
+You get one device "Bambuddy" (queue, schedule, statistics) and one device per printer. Printers, AMS units and spools added later appear automatically. Under **Configure** you can change the polling interval (default 30 s), switch on the **cost sensors**, set the **spool warning level** (default 10 %, 0 = off) and choose **notification targets** (e.g. `mobile_app_your_phone`) for "Notify when done".
 
 ## Dashboard card
 
@@ -180,6 +180,7 @@ The queue actions need "Manage Queue". In the to-do list "Print queue" you can d
 |---|---|
 | AMS 1 slot 1 … / External spool | filament and colour, e.g. "PLA Basic · Jade White". Attributes: `type`, `color`, `color_name`, `remaining` (%, RFID spools), `nozzle_temp_min`, `nozzle_temp_max`, `active`, `ams`, `slot` |
 | AMS 1 humidity / temperature / drying remaining | drying only if the AMS can dry |
+| Filament low | binary sensor (per printer): on when an AMS spool has the warning level or less left (**Configure**, default 10 %). Attribute `spools` lists them. Spools whose level the AMS can't measure (shown without %) are ignored. The card shows a hint and marks the slot. |
 
 ### Bambuddy (queue, schedule, statistics)
 

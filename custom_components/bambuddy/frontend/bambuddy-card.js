@@ -6,7 +6,7 @@
  * without any configuration:  type: custom:bambuddy-card
  */
 
-const CARD_VERSION = "0.12.0";
+const CARD_VERSION = "0.13.0";
 
 const TEXT = {
   de: {
@@ -62,6 +62,7 @@ const TEXT = {
     approx: "ca.",
     filament_missing: "nicht geladen",
     filament_short: "zu wenig Filament",
+    low_spool: "Spule fast leer",
     printing_n: "drucken",
     waiting_n: "wartend",
     idle_n: "bereit",
@@ -126,6 +127,7 @@ const TEXT = {
     approx: "approx.",
     filament_missing: "not loaded",
     filament_short: "not enough filament",
+    low_spool: "Spool running low",
     printing_n: "printing",
     waiting_n: "waiting",
     idle_n: "ready",
@@ -406,6 +408,12 @@ class BambuddyCard extends HTMLElement {
         ${canPress ? `<button data-press="${esc(btn)}">${esc(t.plate_done)}</button>` : ""}</div>`;
     }
 
+    const lowSpool = this._lowSpoolText(p, t);
+    if (lowSpool) {
+      html += `<div class="banner warn" data-more="${esc(p.one["binary_sensor.filament_low"])}">
+        <ha-icon icon="mdi:printer-3d-nozzle-alert"></ha-icon><span>${esc(lowSpool)}</span></div>`;
+    }
+
     const errors = num(this._state(p, "sensor.hms_errors"));
     if (errors) {
       html += `<div class="banner error" data-more="${esc(p.one["sensor.hms_errors"])}">
@@ -419,6 +427,14 @@ class BambuddyCard extends HTMLElement {
     if (this._config.show_camera) html += this._renderCamera(p);
 
     return html + "</section>";
+  }
+
+  // "Spool running low: AMS 1·2 PLA Basic 8 %" from the filament_low sensor, or "".
+  _lowSpoolText(p, t) {
+    const st = this._state(p, "binary_sensor.filament_low");
+    if (st?.state !== "on") return "";
+    const spools = (st.attributes.spools || []).map((s) => `${s.name || s.type || "?"} ${s.remaining} % (AMS ${s.ams}, Slot ${s.slot})`);
+    return `${t.low_spool}: ${spools.join(", ")}`;
   }
 
   _renderJob(p, t) {
@@ -495,12 +511,14 @@ class BambuddyCard extends HTMLElement {
       .map((id) => this._hass.states[id])
       .filter((s) => s && num(s) != null);
 
+    const lowAt = this._state(p, "binary_sensor.filament_low")?.attributes?.threshold || 0;
     const spool = (s, label) => {
       const a = s.attributes;
       const empty = s.state === "empty";
+      const low = lowAt > 0 && !empty && a.ams != null && a.remaining != null && a.remaining <= lowAt;
       const color = empty ? "transparent" : a.color || "var(--disabled-text-color)";
       const remain = a.remaining != null ? `${a.remaining} %` : "";
-      return `<div class="spool${a.active ? " active" : ""}${empty ? " empty" : ""}" data-more="${esc(s.entity_id)}"
+      return `<div class="spool${a.active ? " active" : ""}${empty ? " empty" : ""}${low ? " low" : ""}" data-more="${esc(s.entity_id)}"
           title="${esc(this._fmt(s))}">
         <div class="dot" style="--spool:${esc(color)}"></div>
         <div class="slot">${esc(label)}</div>
@@ -740,6 +758,7 @@ class BambuddyCard extends HTMLElement {
     const plate = this._state(p, "binary_sensor.awaiting_plate_clear")?.state === "on";
     const clearBtn = p.one["button.clear_plate"];
     const errors = num(this._state(p, "sensor.hms_errors"));
+    const lowSpool = this._lowSpoolText(p, t);
     const warn =
       this._config.show_filament_check && next && (next.filament_ok === false || next.filament_short)
         ? `<div class="w-banner warn"><ha-icon icon="mdi:alert"></ha-icon>${esc(
@@ -757,6 +776,7 @@ class BambuddyCard extends HTMLElement {
       }</div>` : ""}
       ${errors ? `<div class="w-banner error"><ha-icon icon="mdi:alert"></ha-icon>${errors} ${esc(errors === 1 ? t.error_one : t.errors)}</div>` : ""}
       ${warn}
+      ${lowSpool ? `<div class="w-banner warn"><ha-icon icon="mdi:printer-3d-nozzle-alert"></ha-icon><span>${esc(lowSpool)}</span></div>` : ""}
       ${next ? `<div class="w-next"><span>${esc(t.up_next)}</span> ${esc(next.name || "?")}${colorDots(next.filament_colors)}${
         next.estimated_start ? ` <span class="w-at">${esc(t.approx)} ${esc(this._time(next.estimated_start))}</span>` : ""
       }${queue.length > 1 ? ` <span class="w-more">+${queue.length - 1}</span>` : ""}</div>` : ""}
@@ -994,6 +1014,7 @@ const STYLE = `
   .slot { color: var(--secondary-text-color); }
   .fil { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rem { color: var(--secondary-text-color); }
+  .spool.low .rem { color: var(--warning-color, #ffa000); font-weight: 600; }
   .hums { display: flex; gap: 12px; margin-top: 6px; font-size: 0.85em; color: var(--secondary-text-color); }
   .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   button { font: inherit; font-size: 0.85em; padding: 5px 12px; border-radius: 16px; cursor: pointer;

@@ -10,7 +10,7 @@ Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/mazig
 - **Warteschlange:** wartende und laufende Aufträge pro Drucker und insgesamt, als To-do-Liste, die sich direkt in Home Assistant **umsortieren und aufräumen** lässt.
 - **Zeitplan:** voraussichtlicher Start und Ende jedes Auftrags, „Frei ab“ pro Drucker und „Druckfarm fertig um“.
 - **Filament-Check** *(optional)*: warnt, wenn ein Auftrag ein Filament braucht, das im Drucker nicht geladen ist.
-- **AMS und Filament:** pro Slot Filament mit Farbnamen (z. B. „PLA Basic · Jade White“) und Restmenge, Luftfeuchtigkeit und Temperatur des AMS.
+- **AMS und Filament:** pro Slot Filament mit Farbnamen (z. B. „PLA Basic · Jade White“) und Restmenge, Luftfeuchtigkeit und Temperatur des AMS und eine **Warnung, wenn eine Spule zur Neige geht** (Schwelle einstellbar).
 - **Kamera, Steuerung:** Livebild; Pausieren, Fortsetzen, Abbrechen, Licht, Geschwindigkeit, „Druckplatte geräumt“.
 - **Aktionen:** Auftrag nach vorne, überspringen, nochmal drucken oder eine Datei aus der Bibliothek drucken – aus Automationen, Skripten oder per Sprachassistent.
 - **Statistik:** Drucke, Erfolgsquote, Druckzeit und Filament aus Bambuddy; **Kosten** *(optional)* für Filament und Energie.
@@ -25,7 +25,7 @@ Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/mazig
 |---|---|
 | **Alles auf einen Blick, Detailfenster, „Benachrichtigen, wenn fertig“** | die **Bambuddy-Karte** auf dem Dashboard; Tipp auf das ⚙ Zahnrad (oder den Druckernamen) öffnet das Detailfenster |
 | Kartenoptionen (Darstellung, Zeitplan, Filament-Check, Bereiche) | Dashboard → Bearbeiten → Karte → Karteneditor |
-| Abfrageintervall, **Kosten-Sensoren**, **Benachrichtigungsziele** | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → **Konfigurieren** |
+| Abfrageintervall, **Kosten-Sensoren**, **Spulen-Warnschwelle**, **Benachrichtigungsziele** | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → **Konfigurieren** |
 | Warteschlange, „Druckfarm fertig um“, Statistik, Kosten | **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy** |
 | Pro Drucker: „Frei ab“, „In Benutzung“, „Druckereignis“, „Benachrichtigen, wenn fertig“, AMS-Slots … | ebenda → Gerät des Druckers |
 | Die Warteschlange als Liste (sortieren, löschen) | Seitenleiste → **To-do-Listen** → „Druck-Warteschlange“ |
@@ -70,7 +70,7 @@ Den Ordner `custom_components/bambuddy` nach `/config/custom_components/bambuddy
 1. **Einstellungen** → **Geräte & Dienste** → **Integration hinzufügen** → **Bambuddy**.
 2. **Bambuddy-Adresse** (wie im Browser, z. B. `http://192.168.1.50:8000`) und **API-Schlüssel** eintragen (leer, wenn Bambuddy keine Anmeldung nutzt).
 
-Es entstehen ein Gerät „Bambuddy“ (Warteschlange, Zeitplan, Statistik) und ein Gerät pro Drucker. Später hinzugefügte Drucker, AMS-Einheiten und Spulen erscheinen automatisch. Unter **Konfigurieren** lassen sich das Abfrageintervall (Standard 30 s) ändern, die **Kosten-Sensoren** einschalten und **Benachrichtigungsziele** (z. B. `mobile_app_dein_handy`) für „Benachrichtigen, wenn fertig“ wählen.
+Es entstehen ein Gerät „Bambuddy“ (Warteschlange, Zeitplan, Statistik) und ein Gerät pro Drucker. Später hinzugefügte Drucker, AMS-Einheiten und Spulen erscheinen automatisch. Unter **Konfigurieren** lassen sich das Abfrageintervall (Standard 30 s) ändern, die **Kosten-Sensoren** einschalten, die **Spulen-Warnschwelle** setzen (Standard 10 %, 0 = aus) und **Benachrichtigungsziele** (z. B. `mobile_app_dein_handy`) für „Benachrichtigen, wenn fertig“ wählen.
 
 ## Dashboard-Karte
 
@@ -176,6 +176,7 @@ Die Warteschlangen-Aktionen brauchen „Warteschlange verwalten“. In der To-do
 |---|---|
 | AMS 1 Slot 1 … / Externe Spule | Filament und Farbe, z. B. „PLA Basic · Jade White“. Attribute: `type`, `color`, `color_name`, `remaining` (%, RFID-Spulen), `nozzle_temp_min`, `nozzle_temp_max`, `active`, `ams`, `slot` |
 | AMS 1 Luftfeuchtigkeit / Temperatur / Trocknung Restzeit | Trocknung nur, wenn das AMS trocknen kann |
+| Filament fast leer | An/Aus-Sensor (pro Drucker): an, wenn eine AMS-Spule nur noch die Warnschwelle oder weniger hat (**Konfigurieren**, Standard 10 %). Das Attribut `spools` listet sie auf. Spulen, deren Füllstand das AMS nicht messen kann (ohne %-Angabe), werden ignoriert. Die Karte zeigt einen Hinweis und markiert den Slot. |
 
 ### Bambuddy (Warteschlange, Zeitplan, Statistik)
 
