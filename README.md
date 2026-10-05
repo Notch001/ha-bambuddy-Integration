@@ -103,6 +103,7 @@ Braucht beim API-Schlüssel das Recht **Drucker steuern**. Ohne dieses Recht zei
 |---|---|
 | Wartende Druckaufträge | Anzahl; Attribute `next_job` und `jobs` (max. 50 Einträge) |
 | Laufende Druckaufträge | Anzahl; Attribut `jobs` |
+| Druck-Warteschlange | Die Warteschlange als **Liste** (To-do-Liste, nur lesen), siehe unten |
 
 Jeder Eintrag in `jobs` enthält: `id`, `name`, `status`, `printer` (bei nicht zugewiesenen Aufträgen z. B. „Any A1 Mini“), `position`, `scheduled_time`, `started_at`, `print_time_minutes`, `filament_type`, `filament_grams`, `manual_start`, `waiting_reason`.
 
@@ -110,9 +111,24 @@ Jeder Eintrag in `jobs` enthält: `id`, `name`, `status`, `printer` (bei nicht z
 
 HACS meldet neue Versionen automatisch unter **Einstellungen** → **Updates**. Nach dem Update Home Assistant neu starten.
 
-## Beispiel: Warteschlange auf dem Dashboard
+## Warteschlange als Liste anzeigen
 
-Eine Markdown-Karte. Ersetze `sensor.bambuddy_wartende_druckauftrage` durch die Entitäts-ID deines Sensors „Wartende Druckaufträge“. Du findest sie unter **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy**.
+Die Entität **Druck-Warteschlange** ist eine To-do-Liste. Laufende Drucke stehen oben mit ▶, darunter die wartenden Aufträge in der Reihenfolge, in der Bambuddy sie startet. Unter jedem Auftrag stehen Drucker, Druckdauer, Filament und, falls vorhanden, warum er noch wartet. Bearbeitet wird die Warteschlange weiterhin in Bambuddy; in Home Assistant ist die Liste nur zum Anschauen.
+
+- **Seitenleiste:** Unter **To-do-Listen** taucht „Bambuddy Druck-Warteschlange“ automatisch auf.
+- **Dashboard:** Dashboard bearbeiten → **Karte hinzufügen** → **To-do-Liste** → als Entität „Bambuddy Druck-Warteschlange“ wählen. Oder per YAML:
+
+```yaml
+type: todo-list
+entity: todo.bambuddy_druck_warteschlange
+title: Druck-Warteschlange
+```
+
+Die Entitäts-ID kann bei dir anders heißen; du findest sie unter **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy**.
+
+## Beispiel: eigene Markdown-Karte
+
+Wer die Liste anders gestalten will, kann die Attribute des Sensors „Wartende Druckaufträge“ in einer Markdown-Karte verwenden. Ersetze `sensor.bambuddy_wartende_druckauftrage` durch die Entitäts-ID deines Sensors „Wartende Druckaufträge“. Du findest sie unter **Einstellungen** → **Geräte & Dienste** → **Bambuddy** → Gerät **Bambuddy**.
 
 ```yaml
 type: markdown

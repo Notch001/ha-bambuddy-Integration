@@ -165,6 +165,11 @@
           "ludicrous": "mdi:rocket-launch"
         }
       }
+    },
+    "todo": {
+      "queue": {
+        "default": "mdi:format-list-numbered"
+      }
     }
   }
 }

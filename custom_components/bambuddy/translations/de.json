@@ -220,6 +220,11 @@
       "cover": {
         "name": "Druckvorschau"
       }
+    },
+    "todo": {
+      "queue": {
+        "name": "Druck-Warteschlange"
+      }
     }
   },
   "exceptions": {

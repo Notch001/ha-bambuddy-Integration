@@ -220,6 +220,11 @@
       "cover": {
         "name": "Print preview"
       }
+    },
+    "todo": {
+      "queue": {
+        "name": "Print queue"
+      }
     }
   },
   "exceptions": {
