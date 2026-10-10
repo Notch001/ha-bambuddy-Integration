@@ -20,6 +20,19 @@
         "data": {
           "api_key": "API key"
         }
+      },
+      "reconfigure": {
+        "title": "Change server",
+        "description": "Point this entry at another server, for example PrintDog instead of Bambuddy. Devices, entity ids, dashboards and automations are kept. PrintDog is detected automatically.",
+        "data": {
+          "url": "Server URL",
+          "api_key": "API key",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "url": "Bambuddy: for example http://192.168.1.50:8000. PrintDog: for example http://192.168.200.86:8090.",
+          "api_key": "Bambuddy: API key from Settings → API keys. PrintDog: the key shown under Settings → \"Directly from Orca Slicer\"."
+        }
       }
     },
     "error": {
@@ -29,7 +42,8 @@
     },
     "abort": {
       "already_configured": "This Bambuddy server is already configured.",
-      "reauth_successful": "API key updated."
+      "reauth_successful": "API key updated.",
+      "reconfigure_successful": "Server updated."
     }
   },
   "options": {

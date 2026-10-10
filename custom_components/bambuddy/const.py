@@ -6,6 +6,9 @@ from typing import Final
 DOMAIN: Final = "bambuddy"
 
 CONF_API_KEY: Final = "api_key"
+CONF_BACKEND: Final = "backend"
+BACKEND_BAMBUDDY: Final = "bambuddy"
+BACKEND_PRINTDOG: Final = "printdog"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
 
 DEFAULT_SCAN_INTERVAL: Final = 30

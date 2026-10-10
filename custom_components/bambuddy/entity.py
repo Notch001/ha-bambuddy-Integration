@@ -143,10 +143,11 @@ def _via_hub(coordinator: BambuddyCoordinator) -> dict[str, Any]:
 
 
 def hub_device_info(coordinator: BambuddyCoordinator) -> DeviceInfo:
+    printdog = getattr(coordinator.client, "backend", "") == "printdog"
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
-        name="Bambuddy",
-        manufacturer="Bambuddy",
+        name="PrintDog" if printdog else "Bambuddy",
+        manufacturer="PrintDog" if printdog else "Bambuddy",
         model="Print farm manager",
         configuration_url=coordinator.client.base_url,
     )

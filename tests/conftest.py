@@ -92,6 +92,7 @@ STATS: dict[str, Any] = {
 def mock_bambuddy(aioclient_mock, *, status: dict[int, dict] | None = None, auth_status: int | None = None) -> None:
     """Register the fake Bambuddy endpoints."""
     aioclient_mock.clear_requests()
+    aioclient_mock.get(f"{URL}/api/status", status=404)  # backend detection: not PrintDog
     if auth_status is not None:
         aioclient_mock.get(f"{API}/printers/", status=auth_status)
         aioclient_mock.get(f"{API}/queue/", status=auth_status)
@@ -116,3 +117,72 @@ def mock_bambuddy(aioclient_mock, *, status: dict[int, dict] | None = None, auth
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     yield
+
+
+# --------------------------------------------------------------------------- PrintDog
+
+PD_URL = "http://192.168.200.86:8090"
+PD_API = f"{PD_URL}/api"
+PD_KEY = "pd_testkey"
+PD_SERIAL = "01S00C123456789"
+
+PD_DETAIL: dict[str, Any] = {
+    "id": 1, "name": "P1P", "model": "P1P", "serial": PD_SERIAL, "online": True, "state": "running", "label": "Druckt",
+    "printing": True, "progress": 42, "remaining_min": 83, "file": "Eule_Beige", "layer": 50, "layers": 120,
+    "nozzle": 219.6, "nozzle_target": 220.0, "bed": 54.9, "bed_target": 55.0, "chamber": 32.0, "nozzle_diameter": 0.4,
+    "light": True, "speed_level": 2, "stage": 255, "plate_free": False, "awaiting_plate_clear": False,
+    "hms": [{"code": "0C00030000020001", "module": 12, "severity": 2}], "sdcard": True, "timelapse": False,
+    "door_open": None, "tray_now": 0,
+    "ams_units": [{
+        "id": 0, "humidity": 4, "humidity_pct": 31, "temp": 26.5, "dry_time": 0, "ht": False,
+        "trays": [
+            {"id": 0, "exists": True, "type": "PLA", "name": "PLA Basic", "color": "#F5E6C8", "remain": 80, "k": 0.02,
+             "nozzle_temp_min": 190, "nozzle_temp_max": 230},
+            {"id": 1, "exists": False, "type": "", "name": "", "color": "", "remain": None, "k": None,
+             "nozzle_temp_min": None, "nozzle_temp_max": None},
+        ],
+    }],
+    "external": [{"id": 254, "exists": True, "type": "PETG", "name": "", "color": "#000000", "remain": None, "k": None,
+                  "nozzle_temp_min": None, "nozzle_temp_max": None}],
+}
+PD_API_DATA: dict[str, Any] = {
+    "detail": PD_DETAIL,
+    "printers": [{"id": 1, "name": "P1P", "model": "P1P", "serial": PD_SERIAL}],
+    "queue": [
+        {"id": 10, "status": "printing", "printer_id": 1, "printer_name": "P1P", "position": 0, "name": "Eule",
+         "label": "DM-2026-001 · Eule", "print_time_s": 5025, "filament_grams": 14.7, "filament_types": ["PLA"],
+         "filament_colors": ["#F5E6C8"], "started_at": "2026-10-10T08:00:00Z"},
+        {"id": 11, "status": "queued", "printer_id": 1, "printer_name": "P1P", "position": 1, "name": "Eule",
+         "label": "DM-2026-001 · Eule", "print_time_s": 5025, "filament_grams": 14.7, "filament_types": ["PLA"],
+         "filament_colors": ["#F5E6C8"]},
+        {"id": 21, "status": "queued", "printer_id": 1, "printer_name": "P1P", "position": 2, "name": "Fuchs",
+         "label": None, "print_time_s": 900, "filament_grams": 3.0, "filament_types": ["PETG"], "filament_colors": []},
+    ],
+    "stats": {"total_prints": 12, "successful_prints": 10, "failed_prints": 1, "cancelled_prints": 1,
+              "total_print_time_hours": 48.5, "total_filament_grams": 987.6, "total_energy_kwh": 5.2,
+              "printer_names": {"1": "P1P"}, "prints_by_printer": {"1": 12}, "prints_by_filament_type": {"PLA": 12}},
+    "files": [{"id": 5, "name": "Eule", "printer_model": "P1P", "plates": []}],
+    "history": [{"id": 7, "name": "Eule", "printer_id": 1, "plate": 1, "status": "finished"}],
+}
+PD_API = f"{PD_URL}/api"
+
+
+def mock_printdog(aioclient_mock) -> None:
+    """Register the fake PrintDog endpoints."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(f"{PD_API}/status", json={"app": "printdog", "version": "0.9.1", "printers": 1, "online": 1})
+    aioclient_mock.get(f"{PD_API}/printers", json=copy.deepcopy(PD_API_DATA["printers"]))
+    aioclient_mock.get(f"{PD_API}/printers/1/detail", json=copy.deepcopy(PD_API_DATA["detail"]))
+    aioclient_mock.get(f"{PD_API}/queue", json=copy.deepcopy(PD_API_DATA["queue"]))
+    aioclient_mock.get(f"{PD_API}/stats", json=copy.deepcopy(PD_API_DATA["stats"]))
+    aioclient_mock.get(f"{PD_API}/files", json=copy.deepcopy(PD_API_DATA["files"]))
+    aioclient_mock.get(f"{PD_API}/history", json=copy.deepcopy(PD_API_DATA["history"]))
+    aioclient_mock.get(f"{PD_API}/printers/1/preview.png", content=b"PNGDATA", headers={"Content-Type": "image/png"})
+    aioclient_mock.get(f"{PD_API}/printers/1/camera.jpg", content=b"JPEGDATA")
+    for command in ("pause", "resume", "stop", "light_on", "light_off", "speed_1", "speed_2", "speed_3", "speed_4"):
+        aioclient_mock.post(f"{PD_API}/printers/1/command/{command}", json={"sent": True})
+    aioclient_mock.post(f"{PD_API}/printers/1/plate-cleared", json={"plate_free": True})
+    aioclient_mock.post(f"{PD_API}/queue/reorder", json={"reordered": True})
+    aioclient_mock.post(f"{PD_API}/jobs", json={"jobs": [{"id": 300}], "mapping": {}, "notes": []})
+    aioclient_mock.post(f"{PD_API}/jobs/7/requeue", json={"id": 301})
+    aioclient_mock.delete(f"{PD_API}/jobs/11", json={"deleted": True})

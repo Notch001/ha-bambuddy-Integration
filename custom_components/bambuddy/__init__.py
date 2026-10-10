@@ -19,7 +19,8 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
 from .api import BambuddyApiClient
-from .const import CONF_API_KEY, DOMAIN
+from .const import BACKEND_PRINTDOG, CONF_API_KEY, CONF_BACKEND, DOMAIN
+from .printdog import PrintDogApiClient
 from .coordinator import BambuddyConfigEntry, BambuddyCoordinator, BambuddyStatsCoordinator
 from .entity import hub_device_info
 from .services import async_setup_services
@@ -105,7 +106,8 @@ async def _async_register_card_resource(hass: HomeAssistant, url: str) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: BambuddyConfigEntry) -> bool:
     """Set up Bambuddy from a config entry."""
     session = async_get_clientsession(hass, verify_ssl=entry.data.get(CONF_VERIFY_SSL, True))
-    client = BambuddyApiClient(session, entry.data[CONF_URL], entry.data.get(CONF_API_KEY))
+    client_class = PrintDogApiClient if entry.data.get(CONF_BACKEND) == BACKEND_PRINTDOG else BambuddyApiClient
+    client = client_class(session, entry.data[CONF_URL], entry.data.get(CONF_API_KEY))
 
     coordinator = BambuddyCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()

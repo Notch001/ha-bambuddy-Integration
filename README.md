@@ -8,7 +8,7 @@
 
 🇩🇪 [Deutsche Anleitung](README.de.md)
 
-Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/bambuddy), the self-hosted manager for Bambu Lab printers. Where other integrations show single printers, this one knows your **whole print farm and its queue**.
+Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/bambuddy), the self-hosted manager for Bambu Lab printers, **and for PrintDog** (printer service of the Dammer Manufaktur workshop, 0.9.1 or newer; detected automatically). Where other integrations show single printers, this one knows your **whole print farm and its queue**.
 
 - **Printer status:** state, current print with preview, progress, remaining time, end time, temperatures, errors, "clear the build plate".
 - **Print queue:** waiting and running jobs per printer and overall, as a to-do list you can **reorder and clean up** right in Home Assistant.
@@ -35,6 +35,13 @@ Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/
 | The queue as a list (reorder, delete) | sidebar → **To-do lists** → "Print queue" |
 | Notifications with "Cleared" button, automatic power | import the [blueprints](#notifications-and-automatic-power-blueprints), then **Settings** → **Automations & scenes** → **Blueprints** |
 | Actions (print again, skip, …) | **Developer tools** → **Actions**, search "Bambuddy" |
+
+## Using PrintDog instead of Bambuddy
+
+- **New install:** add the integration as usual and enter the PrintDog address (for example `http://192.168.200.86:8090`) and the PrintDog API key (PrintDog → *Settings* → *Directly from Orca Slicer*). The integration detects PrintDog and names the entry **PrintDog**.
+- **Existing Bambuddy entry:** *Settings → Devices & services → Bambuddy → ⋮ → Reconfigure*, enter the PrintDog address and key. The entry is switched, so devices, entity ids, dashboards and automations survive.
+- **Differences:** the camera shows snapshots (no live stream); *start job* is not available, PrintDog starts a waiting job when the plate is cleared; costs are not calculated by PrintDog (the energy sensors show kWh from the measuring plugs you configure per printer in PrintDog).
+- If you use the *automatic power* blueprint **and** PrintDog's "switch after print end" for the same plug, both switch it - use only one.
 
 ## Requirements
 

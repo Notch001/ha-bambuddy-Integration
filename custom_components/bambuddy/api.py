@@ -51,7 +51,10 @@ def normalize_url(url: str) -> str:
 
 
 class BambuddyApiClient:
-    """Talks to one Bambuddy instance."""
+    """Talks to one Bambuddy instance (``PrintDogApiClient`` in printdog.py talks to PrintDog the same way)."""
+
+    api_prefix = API_PREFIX
+    backend = "bambuddy"
 
     def __init__(
         self,
@@ -89,7 +92,7 @@ class BambuddyApiClient:
     ) -> Any:
         """Send a request; return parsed JSON, or (bytes, content type) if raw."""
         headers = {"Accept": "*/*" if raw else "application/json", **self.headers}
-        url = f"{self._base_url}{API_PREFIX}{path}"
+        url = f"{self._base_url}{self.api_prefix}{path}"
         try:
             async with asyncio.timeout(timeout):
                 async with self._session.request(
@@ -212,7 +215,7 @@ class BambuddyApiClient:
 
     async def camera_stream_url(self, printer_id: int) -> str:
         token = await self._camera_token()
-        url = f"{self._base_url}{API_PREFIX}/printers/{printer_id}/camera/stream"
+        url = f"{self._base_url}{self.api_prefix}/printers/{printer_id}/camera/stream"
         return f"{url}?token={token}" if token else url
 
     async def _post(self, path: str, params: dict[str, Any] | None = None) -> Any:

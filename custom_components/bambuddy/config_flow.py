@@ -25,7 +25,9 @@ from .api import (
     normalize_url,
 )
 from .const import (
+    BACKEND_PRINTDOG,
     CONF_API_KEY,
+    CONF_BACKEND,
     CONF_ENABLE_COSTS,
     CONF_LOW_SPOOL,
     CONF_NOTIFY_TARGETS,
@@ -37,6 +39,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
 )
 from .coordinator import BambuddyConfigEntry
+from .printdog import PrintDogApiClient, detect_backend
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,22 +51,23 @@ class BambuddyConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_validate(
         self, url: str, api_key: str | None, verify_ssl: bool
-    ) -> str | None:
-        """Try the credentials; return an error key or None on success."""
-        client = BambuddyApiClient(
-            async_get_clientsession(self.hass, verify_ssl=verify_ssl), url, api_key
-        )
+    ) -> tuple[str | None, str]:
+        """Try the credentials; return (error key or None, detected backend)."""
+        session = async_get_clientsession(self.hass, verify_ssl=verify_ssl)
+        backend = await detect_backend(session, url, api_key)
+        client_class = PrintDogApiClient if backend == BACKEND_PRINTDOG else BambuddyApiClient
+        client = client_class(session, url, api_key)
         try:
             await client.get_printers()
             await client.get_queue("pending")
         except BambuddyAuthError:
-            return "invalid_auth"
+            return "invalid_auth", backend
         except BambuddyConnectionError:
-            return "cannot_connect"
+            return "cannot_connect", backend
         except Exception:
-            _LOGGER.exception("Unexpected error while validating Bambuddy")
-            return "unknown"
-        return None
+            _LOGGER.exception("Unexpected error while validating the server")
+            return "unknown", backend
+        return None, backend
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -75,14 +79,15 @@ class BambuddyConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(url)
             self._abort_if_unique_id_configured()
 
-            error = await self._async_validate(url, api_key, user_input[CONF_VERIFY_SSL])
+            error, backend = await self._async_validate(url, api_key, user_input[CONF_VERIFY_SSL])
             if error is None:
                 return self.async_create_entry(
-                    title="Bambuddy",
+                    title="PrintDog" if backend == BACKEND_PRINTDOG else "Bambuddy",
                     data={
                         CONF_URL: url,
                         CONF_API_KEY: api_key,
                         CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
+                        CONF_BACKEND: backend,
                     },
                 )
             errors["base"] = error
@@ -112,7 +117,7 @@ class BambuddyConfigFlow(ConfigFlow, domain=DOMAIN):
         entry = self._get_reauth_entry()
         if user_input is not None:
             api_key = user_input.get(CONF_API_KEY, "").strip() or None
-            error = await self._async_validate(
+            error, _backend = await self._async_validate(
                 entry.data[CONF_URL], api_key, entry.data.get(CONF_VERIFY_SSL, True)
             )
             if error is None:
@@ -125,6 +130,46 @@ class BambuddyConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Optional(CONF_API_KEY): str}),
             description_placeholders={"url": entry.data[CONF_URL]},
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Point the existing entry at another server (e.g. from Bambuddy to PrintDog).
+
+        The entry, its devices and entity ids stay, so dashboards and automations keep working.
+        """
+        errors: dict[str, str] = {}
+        entry = self._get_reconfigure_entry()
+        if user_input is not None:
+            url = normalize_url(user_input[CONF_URL])
+            api_key = user_input.get(CONF_API_KEY, "").strip() or None
+            error, backend = await self._async_validate(url, api_key, user_input[CONF_VERIFY_SSL])
+            if error is None:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    unique_id=url,
+                    title="PrintDog" if backend == BACKEND_PRINTDOG else "Bambuddy",
+                    data_updates={
+                        CONF_URL: url,
+                        CONF_API_KEY: api_key,
+                        CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
+                        CONF_BACKEND: backend,
+                    },
+                )
+            errors["base"] = error
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_URL, default=entry.data[CONF_URL]): str,
+                vol.Optional(CONF_API_KEY, default=entry.data.get(CONF_API_KEY) or ""): str,
+                vol.Required(CONF_VERIFY_SSL, default=entry.data.get(CONF_VERIFY_SSL, True)): bool,
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(schema, user_input),
             errors=errors,
         )
 

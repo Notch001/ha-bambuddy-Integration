@@ -3,6 +3,18 @@
 The section of a version becomes its GitHub release notes, which Home Assistant
 shows under **Settings → Updates** when the update is offered.
 
+## 0.16.0
+
+- **Works with PrintDog now** (needs PrintDog 0.9.1 or newer). PrintDog is the printer service of the
+  Dammer Manufaktur workshop and takes over from Bambuddy. The integration detects PrintDog by itself
+  when you add it, and the card, the entities, the actions and the blueprints work as before.
+- **Switch an existing entry to PrintDog without losing anything:** *Settings → Devices & services →
+  Bambuddy → ⋮ → Reconfigure*, enter the PrintDog address and key. Devices, entity ids, dashboards and
+  automations are kept (the domain stays `bambuddy`).
+- PrintDog has no live video stream: the camera shows snapshots. "Start job" is not available (PrintDog
+  starts a waiting job when the plate is cleared – use *clear plate*). Energy figures come from the
+  measuring plugs configured in PrintDog.
+
 ## 0.15.0
 
 - Printer card: new option **Layout → Vertical (ring on top)**: big ring above, all values

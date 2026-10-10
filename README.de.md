@@ -4,7 +4,7 @@
 
 🇬🇧 [English](README.md)
 
-Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/maziggy/bambuddy), die selbst gehostete Verwaltung für Bambu-Lab-Drucker. Andere Integrationen zeigen einzelne Drucker – diese kennt die **ganze Druckfarm und ihre Warteschlange**.
+Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/maziggy/bambuddy), die selbst gehostete Verwaltung für Bambu-Lab-Drucker, **und für PrintDog** (Druckerdienst der Dammer Manufaktur, ab Version 0.9.1; wird automatisch erkannt). Andere Integrationen zeigen einzelne Drucker – diese kennt die **ganze Druckfarm und ihre Warteschlange**.
 
 - **Druckerstatus:** Status, aktueller Druck mit Vorschau, Fortschritt, Restzeit, Ende, Temperaturen, Fehler, „Druckplatte räumen“.
 - **Warteschlange:** wartende und laufende Aufträge pro Drucker und insgesamt, als To-do-Liste, die sich direkt in Home Assistant **umsortieren und aufräumen** lässt.
@@ -31,6 +31,13 @@ Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/mazig
 | Die Warteschlange als Liste (sortieren, löschen) | Seitenleiste → **To-do-Listen** → „Druck-Warteschlange“ |
 | Benachrichtigungen mit „Geräumt“, automatisches Ein/Aus | [Blueprints](#benachrichtigungen-und-automatisches-ein-ausschalten-blueprints) importieren, dann **Einstellungen** → **Automationen & Szenen** → **Blueprints** |
 | Aktionen (nochmal drucken, überspringen …) | **Entwicklerwerkzeuge** → **Aktionen**, nach „Bambuddy“ suchen |
+
+## PrintDog statt Bambuddy nutzen
+
+- **Neu einrichten:** Integration wie gewohnt hinzufügen, die PrintDog-Adresse (z. B. `http://192.168.200.86:8090`) und den PrintDog-API-Schlüssel eintragen (PrintDog → *Einstellungen* → *Direkt aus Orca Slicer*). Die Integration erkennt PrintDog und nennt den Eintrag **PrintDog**.
+- **Bestehender Bambuddy-Eintrag:** *Einstellungen → Geräte & Dienste → Bambuddy → ⋮ → Neu konfigurieren*, PrintDog-Adresse und Schlüssel eintragen. Der Eintrag wird umgestellt, Geräte, Entitäts-IDs, Dashboards und Automationen bleiben erhalten.
+- **Unterschiede:** Die Kamera zeigt Einzelbilder (kein Livestream); „Auftrag starten“ gibt es nicht, PrintDog startet einen wartenden Auftrag, sobald die Platte geräumt ist; Kosten berechnet PrintDog nicht (die Energie-Sensoren zeigen kWh der Messsteckdosen, die du je Drucker in PrintDog einträgst).
+- Nutzt du den Blueprint *automatischer Strom* **und** den Schalter nach Druckende von PrintDog für dieselbe Steckdose, schalten beide – nimm nur eines.
 
 ## Voraussetzungen
 

@@ -24,7 +24,7 @@ async def test_user_flow_success(hass: HomeAssistant, aioclient_mock) -> None:
         {CONF_URL: "bambuddy.local:8000/", CONF_API_KEY: f" {API_KEY} ", CONF_VERIFY_SSL: True},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {CONF_URL: URL, CONF_API_KEY: API_KEY, CONF_VERIFY_SSL: True}
+    assert result["data"] == {CONF_URL: URL, CONF_API_KEY: API_KEY, CONF_VERIFY_SSL: True, "backend": "bambuddy"}
     await hass.async_block_till_done()
 
 
@@ -39,6 +39,7 @@ async def test_user_flow_invalid_auth(hass: HomeAssistant, aioclient_mock) -> No
 
 
 async def test_user_flow_cannot_connect(hass: HomeAssistant, aioclient_mock) -> None:
+    aioclient_mock.get(f"{URL}/api/status", status=404)
     aioclient_mock.get(f"{URL}/api/v1/printers/", exc=TimeoutError())
     result = await _start(hass)
     result = await hass.config_entries.flow.async_configure(
