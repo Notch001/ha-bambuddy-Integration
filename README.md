@@ -10,7 +10,7 @@
 
 Unofficial Home Assistant integration for [Bambuddy](https://github.com/maziggy/bambuddy), the self-hosted manager for Bambu Lab printers, **and for PrintDog** (printer service of the Dammer Manufaktur workshop, 0.9.1 or newer; detected automatically). Where other integrations show single printers, this one knows your **whole print farm and its queue**.
 
-- **Printer status:** state, current print with preview, progress, remaining time, end time, temperatures, errors, "clear the build plate".
+- **Printer status:** state, current print with preview, progress, remaining time, end time, temperatures, errors (the card frames the printer in red), "clear the build plate".
 - **Print queue:** waiting and running jobs per printer and overall, as a to-do list you can **reorder and clean up** right in Home Assistant.
 - **Schedule:** estimated start and end of every queued job, "free from" per printer and "print farm done at".
 - **Filament check** *(optional)*: warns when a queued job needs a filament that isn't loaded on its printer.

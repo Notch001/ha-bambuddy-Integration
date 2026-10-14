@@ -3,6 +3,12 @@
 The section of a version becomes its GitHub release notes, which Home Assistant
 shows under **Settings → Updates** when the update is offered.
 
+## 0.17.0
+
+- Cards: a printer with a problem (HMS errors or a failed print) now gets a **red frame**. It is drawn
+  inside the tile, so the card does not get wider and the layout stays as it is. Works in the Bambuddy
+  card (list and wall view) and in the printer card.
+
 ## 0.16.0
 
 - **Works with PrintDog now** (needs PrintDog 0.9.1 or newer). PrintDog is the printer service of the
