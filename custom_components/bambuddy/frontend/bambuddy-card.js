@@ -7,7 +7,7 @@
  * One printer, compact (kitchen dashboards): type: custom:bambuddy-printer-card
  */
 
-const CARD_VERSION = "0.15.0";
+const CARD_VERSION = "0.17.0";
 
 const TEXT = {
   de: {
@@ -428,7 +428,8 @@ class BambuddyCard extends HTMLElement {
     const printing = PRINTING_STATES.has(state);
     const color = STATE_COLORS[state] || "var(--secondary-text-color)";
 
-    let html = `<section class="printer" style="--accent:${color}">
+    const hasError = state === "failed" || !!num(this._state(p, "sensor.hms_errors"));
+    let html = `<section class="printer${hasError ? " has-error" : ""}" style="--accent:${color}">
       <div class="head">
         <ha-icon icon="mdi:printer-3d"></ha-icon>
         <span class="name" data-dialog="${esc(p.id)}" title="${esc(t.details)}">${esc(p.name)}</span>
@@ -802,7 +803,7 @@ class BambuddyCard extends HTMLElement {
             next.filament_ok === false ? `${next.filament_missing.join(", ")} ${t.filament_missing}` : t.filament_short,
           )}</div>`
         : "";
-    return `<div class="w-tile" style="--accent:${color}" data-dialog="${esc(p.id)}">
+    return `<div class="w-tile${errors || state === "failed" ? " has-error" : ""}" style="--accent:${color}" data-dialog="${esc(p.id)}">
       <div class="w-head"><span class="w-name">${esc(p.name)}</span><span class="chip" style="--chip:${color}">${esc(this._fmt(stateObj))}</span>
         <button class="gear" data-dialog="${esc(p.id)}" aria-label="${esc(t.details)}"><ha-icon icon="mdi:cog"></ha-icon></button></div>
       ${this._ring(printing ? progress : 0, color, inner)}
@@ -1007,6 +1008,10 @@ const STYLE = `
   .printers:not(.single) section.printer { border: 1px solid var(--divider-color); border-radius: 12px;
     border-top: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--card-background-color, transparent)); }
   .printers.single section.printer { border-top: 4px solid var(--accent); }
+  /* Error frame: drawn inside the box (overlay, no border) so the layout never shifts. */
+  .has-error { position: relative; }
+  .has-error::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: inset 0 0 0 3px var(--error-color, #db4437); }
   .pad { padding: 12px 16px; }
   .card-title { margin: 0; padding: 12px 16px 0; font-size: 1.25em; font-weight: 500; color: var(--ha-card-header-color, var(--primary-text-color)); }
   section { padding: 12px 16px; }
@@ -1324,6 +1329,7 @@ class BambuddyPrinterCard extends HTMLElement {
     const job = this._state("sensor.current_print")?.state;
     const progress = done ? 100 : printing ? num(this._state("sensor.progress")) ?? 0 : 0;
 
+    const hasError = state === "failed" || !!num(this._state("sensor.hms_errors"));
     const spools = this._spools();
     const active = spools.find((s) => s.attributes.active);
     const stateColor = STATE_COLORS[state] || "var(--secondary-text-color)";
@@ -1386,7 +1392,7 @@ class BambuddyPrinterCard extends HTMLElement {
     }
 
     this.shadowRoot.innerHTML = `<style>${PRINTER_STYLE}</style>
-      <ha-card class="${printing ? "printing" : ""}" style="--accent:${stateColor}">
+      <ha-card class="${printing ? "printing" : ""}${hasError ? " has-error" : ""}" style="--accent:${stateColor}">
         <div class="pc${this._config.layout === "vertical" ? " vertical" : ""}">
           ${ring}
           <div class="info">
@@ -1405,6 +1411,11 @@ const PRINTER_STYLE = `
   /* Fill the height the dashboard gives the card (e.g. a fixed number of rows). */
   :host { display: block; height: 100%; }
   ha-card { display: block; padding: 16px; height: 100%; box-sizing: border-box; container-type: inline-size; overflow: hidden; }
+  /* Error frame: drawn inside the box (overlay, no border) so the layout never shifts. */
+  ha-card.has-error { position: relative; }
+  ha-card.has-error::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: inset 0 0 0 3px var(--error-color, #db4437); }
+
   .pc { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
   .ring { position: relative; width: clamp(104px, 34cqw, 150px); aspect-ratio: 1; container-type: inline-size; flex: none; }
   .ring svg { width: 100%; height: 100%; display: block; }

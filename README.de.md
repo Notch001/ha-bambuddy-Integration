@@ -6,7 +6,7 @@
 
 Inoffizielle Home-Assistant-Integration für [Bambuddy](https://github.com/maziggy/bambuddy), die selbst gehostete Verwaltung für Bambu-Lab-Drucker, **und für PrintDog** (Druckerdienst der Dammer Manufaktur, ab Version 0.9.1; wird automatisch erkannt). Andere Integrationen zeigen einzelne Drucker – diese kennt die **ganze Druckfarm und ihre Warteschlange**.
 
-- **Druckerstatus:** Status, aktueller Druck mit Vorschau, Fortschritt, Restzeit, Ende, Temperaturen, Fehler, „Druckplatte räumen“.
+- **Druckerstatus:** Status, aktueller Druck mit Vorschau, Fortschritt, Restzeit, Ende, Temperaturen, Fehler (die Karte umrandet den Drucker rot), „Druckplatte räumen“.
 - **Warteschlange:** wartende und laufende Aufträge pro Drucker und insgesamt, als To-do-Liste, die sich direkt in Home Assistant **umsortieren und aufräumen** lässt.
 - **Zeitplan:** voraussichtlicher Start und Ende jedes Auftrags, „Frei ab“ pro Drucker und „Druckfarm fertig um“.
 - **Filament-Check** *(optional)*: warnt, wenn ein Auftrag ein Filament braucht, das im Drucker nicht geladen ist.
